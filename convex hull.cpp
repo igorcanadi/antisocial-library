@@ -51,6 +51,11 @@ public:
 		sort(tmp.points.begin()+1, tmp.points.end(), PointsCmp(tmp.points[0]));
 
 		Polygon hull;
+
+        if (tmp.size() < 3) {
+            return hull;
+        }
+
 		hull.points.push_back(tmp.points[0]);
 		hull.points.push_back(tmp.points[1]);
 		hull.points.push_back(tmp.points[2]);
