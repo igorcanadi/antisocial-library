@@ -1,3 +1,9 @@
+/***************************
+ *     Number theory 
+ * *************************/
+// WA library.
+// CRT NOT TESTED
+// extended gcd works
 #include <cmath>
 #include <cstdlib>
 #include <cstdio>

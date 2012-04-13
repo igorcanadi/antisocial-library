@@ -1,3 +1,6 @@
+/***************************
+ *     Union find 
+ * *************************/
 // NOT TESTED YET
 // C/P from Univ of Zagreb library
 #include <cstdio>

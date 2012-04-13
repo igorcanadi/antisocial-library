@@ -1,3 +1,6 @@
+/***************************
+ *     SCC 
+ * *************************/
 // Tested on 11504
 #include <cstdio>
 #include <cstring>
