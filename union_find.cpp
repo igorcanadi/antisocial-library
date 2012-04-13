@@ -1,4 +1,5 @@
 // NOT TESTED YET
+// C/P from Univ of Zagreb library
 #include <cstdio>
 #define MAXN 1000000
 #define NOT_CONNECTED 0
