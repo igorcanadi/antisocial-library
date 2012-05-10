@@ -1,0 +1,3762 @@
+%!PS-Adobe-3.0
+%%Title: convex_hull.cpp, geom_intersect.cpp, geom_poly.cpp, hungarian.cpp, kmp.cpp, matching.cpp, min_cost_max_flow.cpp, network_flow.cpp, number_theory.cpp, scc.cpp
+%%For: Igor Canadi
+%%Creator: a2ps version 4.14
+%%CreationDate: Thu Apr 12 20:29:15 2012
+%%BoundingBox: 24 40 588 752
+%%DocumentData: Clean7Bit
+%%Orientation: Portrait
+%%Pages: 28
+%%PageOrder: Ascend
+%%DocumentMedia: Letterdj 612 792 0 () ()
+%%DocumentNeededResources: font Courier
+%%+ font Courier-Bold
+%%+ font Helvetica
+%%+ font Helvetica-Bold
+%%+ font Symbol
+%%+ font Times-Bold
+%%+ font Times-Roman
+%%DocumentProcessColors: Black Blue Green Red 
+%%DocumentSuppliedResources: procset a2ps-color-prolog
+%%+ encoding ISO-8859-1Encoding
+%%EndComments
+/a2psdict 200 dict def
+a2psdict begin
+%%BeginProlog
+%%Copyright: (c) 1988, 89, 90, 91, 92, 93 Miguel Santana
+%%Copyright: (c) 1995, 96, 97, 98 Akim Demaille, Miguel Santana
+% Check PostScript language level.
+/languagelevel where {
+  pop /gs_languagelevel languagelevel def
+} {
+  /gs_languagelevel 1 def
+} ifelse
+
+% EPSF import as in the Red Book
+/BeginInclude {
+  /b4_Inc_state save def    		% Save state for cleanup
+  /dict_count countdictstack def	% Count objects on dict stack
+  /op_count count 1 sub def		% Count objects on operand stack 
+  userdict begin
+    0 setgray 0 setlinecap
+    1 setlinewidth 0 setlinejoin
+    10 setmiterlimit [ ] 0 setdash newpath
+    gs_languagelevel 1 ne {
+      false setstrokeadjust false setoverprint 
+    } if
+} bind def
+
+/EndInclude {
+  count op_count sub { pos } repeat	% Clean up stacks
+  countdictstack dict_count sub { end } repeat
+  b4_Inc_state restore
+} bind def
+
+/BeginEPSF {
+  BeginInclude
+  /showpage { } def
+} bind def
+
+/EndEPSF {
+  EndInclude
+} bind def
+
+% Page prefeed
+/page_prefeed {         % bool -> -
+  statusdict /prefeed known {
+    statusdict exch /prefeed exch put
+  } {
+    pop
+  } ifelse
+} bind def
+
+/deffont {
+  findfont exch scalefont def
+} bind def
+
+/reencode_font {
+  findfont reencode 2 copy definefont pop def
+} bind def
+
+% Function c-show (str => -)
+% centers text only according to x axis.
+/c-show { 
+  dup stringwidth pop
+  2 div neg 0 rmoveto
+  show
+} bind def
+
+% Function l-show (str => -)
+% prints texts so that it ends at currentpoint
+/l-show {
+  dup stringwidth pop neg 
+  0 
+  rmoveto show
+} bind def
+
+% center-fit show (str w => -)
+% show centered, and scale currentfont so that the width is less than w
+/cfshow {
+  exch dup stringwidth pop
+  % If the title is too big, try to make it smaller
+  3 2 roll 2 copy
+  gt
+  { % if, i.e. too big
+    exch div
+    currentfont exch scalefont setfont
+  } { % ifelse
+    pop pop 
+  }
+  ifelse
+  c-show			% center title
+} bind def
+
+% Return the y size of the current font
+% - => fontsize
+/currentfontsize {
+  currentfont /FontMatrix get 3 get 1000 mul
+} bind def
+
+% reencode the font
+% <encoding-vector> <fontdict> -> <newfontdict>
+/reencode { %def
+  dup length 5 add dict begin
+    { %forall
+      % <vector> <key> <val>
+      1 index /FID ne 
+      { def }{ pop pop } ifelse
+    } forall
+    /Encoding exch def % -
+
+    % Use the font's bounding box to determine the ascent, descent,
+    % and overall height; don't forget that these values have to be
+    % transformed using the font's matrix.
+    % We use `load' because sometimes BBox is executable, sometimes not.
+    % Since we need 4 numbers an not an array avoid BBox from being executed
+    /FontBBox load aload pop
+    FontMatrix transform /Ascent exch def pop
+    FontMatrix transform /Descent exch def pop
+    /FontHeight Ascent Descent sub def
+
+    % Get the underline position and thickness if they're defined.
+    % Use 1 if they are not defined.
+    currentdict /FontInfo 2 copy known
+    { get
+      /UnderlinePosition 2 copy % <FontInfo> /UP <FontInfo> /UP
+      2 copy known
+      { get }{ pop pop 1 } ifelse
+      0 exch FontMatrix transform exch pop
+      def % <FontInfo>
+
+      /UnderlineThickness 2 copy % <FontInfo> /UT <FontInfo> /UT
+      2 copy known
+      { get }{ pop pop 1 } ifelse
+      0 exch FontMatrix transform exch pop
+      def % <FontInfo>
+      pop % -
+    }{ pop pop
+    } ifelse
+
+    currentdict
+  end 
+} bind def
+
+% Function print line number (<string> # -)
+/# {
+  gsave
+    sx cw mul neg 2 div 0 rmoveto
+    f# setfont
+    c-show
+  grestore
+} bind def
+
+% -------- Some routines to enlight plain b/w printings ---------
+
+% Underline
+% width --
+/dounderline {
+  currentpoint
+  gsave
+    moveto
+    0 currentfont /Descent get currentfontsize mul rmoveto
+    0 rlineto
+    stroke
+  grestore
+} bind def
+
+% Underline a string
+% string --
+/dounderlinestring {
+  stringwidth pop
+  dounderline
+} bind def
+
+/UL {
+  /ul exch store
+} bind def
+
+% Draw a box of WIDTH wrt current font
+% width --
+/dobox {
+  currentpoint
+  gsave
+    newpath
+    moveto
+    0 currentfont /Descent get currentfontsize mul rmoveto
+    dup 0 rlineto
+    0 currentfont /FontHeight get currentfontsize mul rlineto
+    neg 0 rlineto
+    closepath
+    stroke
+  grestore
+} bind def
+
+/BX {
+  /bx exch store
+} bind def
+
+% Box a string
+% string --
+/doboxstring {
+  stringwidth pop
+  dobox
+} bind def
+
+%
+% ------------- Color routines ---------------
+%
+/FG /setrgbcolor load def
+
+% Draw the background
+% width --
+/dobackground {
+  currentpoint
+  gsave
+    newpath
+    moveto
+    0 currentfont /Descent get currentfontsize mul rmoveto
+    dup 0 rlineto
+    0 currentfont /FontHeight get currentfontsize mul rlineto
+    neg 0 rlineto
+    closepath
+    bgcolor aload pop setrgbcolor
+    fill
+  grestore
+} bind def
+
+% Draw bg for a string
+% string --
+/dobackgroundstring {
+  stringwidth pop
+  dobackground
+} bind def
+
+
+/BG {
+  dup /bg exch store
+  { mark 4 1 roll ] /bgcolor exch store } if
+} bind def
+
+
+/Show {
+  bg { dup dobackgroundstring } if
+  ul { dup dounderlinestring } if
+  bx { dup doboxstring } if
+  show
+} bind def
+
+% Function T(ab), jumps to the n-th tabulation in the current line
+/T {
+  cw mul x0 add
+  bg { dup currentpoint pop sub dobackground } if
+  ul { dup currentpoint pop sub dounderline } if
+  bx { dup currentpoint pop sub dobox } if
+  y0 moveto
+} bind def
+
+% Function n: move to the next line
+/n {
+  /y0 y0 bfs sub store
+  x0 y0 moveto
+} bind def
+
+% Function N: show and move to the next line
+/N {
+  Show
+  /y0 y0 bfs sub store
+  x0 y0 moveto
+} bind def
+
+/S {
+  Show
+} bind def
+
+%%Copyright: (c) 1988, 89, 90, 91, 92, 93 Miguel Santana
+%%Copyright: (c) 1995, 96, 97, 98 Akim Demaille, Miguel Santana
+% Function title: prints page header.
+% <ct> <rt> <lt> are passed as argument
+/title { 
+  % 1. Draw the background
+  x v get y v get moveto
+  0 setgray
+  gsave
+    0 th 2 div neg rmoveto 
+    th setlinewidth
+    0.5 0.5 1 setrgbcolor
+    pw 0 rlineto stroke
+  grestore
+  % 2. Border it
+  gsave
+    0.7 setlinewidth
+    pw 0 rlineto
+    0 th neg rlineto
+    pw neg 0 rlineto
+    closepath stroke
+  grestore
+  % stk: ct rt lt
+  x v get y v get th sub 1 add moveto
+%%IncludeResource: font Helvetica
+  fHelvetica fnfs 0.8 mul scalefont setfont
+  % 3. The left title
+  gsave
+    dup stringwidth pop fnfs 0.8 mul add exch % leave space took on stack
+    fnfs 0.8 mul hm rmoveto
+    show			% left title
+  grestore
+  exch
+  % stk: ct ltw rt
+  % 4. the right title
+  gsave
+    dup stringwidth pop fnfs 0.8 mul add exch % leave space took on stack
+    dup
+    pw exch stringwidth pop fnfs 0.8 mul add sub
+    hm
+    rmoveto
+    show			% right title
+  grestore
+  % stk: ct ltw rtw
+  % 5. the center title
+  gsave
+    pw 3 1 roll
+    % stk: ct pw ltw rtw
+    3 copy 
+    % Move to the center of the left room
+    sub add 2 div hm rmoveto
+    % What is the available space in here?
+    add sub fnfs 0.8 mul sub fnfs 0.8 mul sub
+    % stk: ct space_left
+%%IncludeResource: font Helvetica-Bold
+  fHelvetica-Bold fnfs scalefont setfont
+    1 setgray
+    cfshow
+  grestore
+} bind def
+
+% Function border: prints virtual page border
+/border { %def
+  gsave				% print four sides
+    0 setgray
+    x v get y v get moveto
+    0.7 setlinewidth		% of the square
+    pw 0 rlineto
+    0 ph neg rlineto
+    pw neg 0 rlineto
+    closepath stroke
+  grestore
+} bind def
+
+% Function water: prints a water mark in background
+/water { %def
+  gsave
+    scx scy moveto rotate
+%%IncludeResource: font Times-Bold
+  fTimes-Bold 100 scalefont setfont
+    .97 setgray
+    dup stringwidth pop 2 div neg -50 rmoveto
+    show
+  grestore
+} bind def
+
+% Function rhead: prints the right header
+/rhead {  %def
+  lx ly moveto
+  fHelvetica fnfs 0.8 mul scalefont setfont
+  l-show
+} bind def
+
+% Function footer (cf rf lf -> -)
+/footer {
+  fHelvetica fnfs 0.8 mul scalefont setfont
+  dx dy moveto
+  show
+
+  snx sny moveto
+  l-show
+  
+  fnx fny moveto
+  c-show
+} bind def
+
+% Function print line number (<string> # -)
+/# {
+  gsave
+    sx cw mul neg 2 div 0 rmoveto
+    f# setfont
+    c-show
+  grestore
+} bind def
+%%BeginResource: procset a2ps-color-prolog 2.0 1
+
+%% Definition of the color faces.
+/p {
+  0 0 0 FG
+  false BG
+  false UL
+  false BX
+  fCourier bfs scalefont setfont
+  Show
+} bind def
+
+/sy {
+  0 0 0 FG
+  false BG
+  fSymbol bfs scalefont setfont
+  Show
+} bind def
+
+/k {
+  false BG
+  false UL
+  false BX
+  0 0 0.9 FG
+  fCourier bfs scalefont setfont
+  Show
+} bind def
+
+/K {
+  false BG
+  false UL
+  false BX
+  0 0 0.8 FG
+  fCourier-Bold bfs scalefont setfont
+  Show
+} bind def
+
+/c {
+  false BG
+  false UL
+  false BX
+  0.8 0 0 FG
+  fCourier bfs scalefont setfont
+  Show
+} bind def
+
+/C {
+  false BG
+  false UL
+  false BX
+  0.8 0 0 FG
+  fCourier-Bold bfs scalefont setfont
+  Show
+} bind def
+
+/l {
+  0 0 0 FG
+  0.8 0.8 0 true BG
+  false UL
+  false BX
+  fCourier bfs scalefont setfont
+  Show
+} bind def
+
+/L {
+  0 0 0 FG
+  1 1 0 true BG
+  false UL
+  false BX
+  fCourier-Bold bfs scalefont setfont
+  Show
+} bind def
+
+/str {
+  false BG
+  false UL
+  false BX
+  0 0.5 0 FG
+  fTimes-Roman bfs scalefont setfont
+  Show
+} bind def
+
+/e{
+  1 0 0 true BG
+  false UL
+  true BX
+  1 1 1 FG
+  fHelvetica-Bold bfs scalefont setfont
+  Show
+} bind def
+
+% Function print line number (<string> # -)
+/# {
+  gsave
+    sx cw mul 2 div neg 0 rmoveto
+    f# setfont
+    0.8 0.1 0.1 FG
+    c-show
+  grestore
+} bind def
+%%EndResource
+%%EndProlog
+%%BeginSetup
+%%IncludeResource: font Courier
+%%IncludeResource: font Courier-Bold
+%%IncludeResource: font Times-Roman
+%%IncludeResource: font Symbol
+%%BeginResource: encoding ISO-8859-1Encoding
+/ISO-8859-1Encoding [
+/.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef 
+/.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef 
+/.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef 
+/.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef 
+/space /exclam /quotedbl /numbersign /dollar /percent /ampersand /quoteright 
+/parenleft /parenright /asterisk /plus /comma /minus /period /slash 
+/zero /one /two /three /four /five /six /seven 
+/eight /nine /colon /semicolon /less /equal /greater /question 
+/at /A /B /C /D /E /F /G 
+/H /I /J /K /L /M /N /O 
+/P /Q /R /S /T /U /V /W 
+/X /Y /Z /bracketleft /backslash /bracketright /asciicircum /underscore 
+/quoteleft /a /b /c /d /e /f /g 
+/h /i /j /k /l /m /n /o 
+/p /q /r /s /t /u /v /w 
+/x /y /z /braceleft /bar /braceright /asciitilde /.notdef 
+/.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef 
+/.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef 
+/.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef 
+/.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef 
+/space /exclamdown /cent /sterling /currency /yen /brokenbar /section 
+/dieresis /copyright /ordfeminine /guillemotleft /logicalnot /hyphen /registered /macron 
+/degree /plusminus /twosuperior /threesuperior /acute /mu /paragraph /bullet 
+/cedilla /onesuperior /ordmasculine /guillemotright /onequarter /onehalf /threequarters /questiondown 
+/Agrave /Aacute /Acircumflex /Atilde /Adieresis /Aring /AE /Ccedilla 
+/Egrave /Eacute /Ecircumflex /Edieresis /Igrave /Iacute /Icircumflex /Idieresis 
+/Eth /Ntilde /Ograve /Oacute /Ocircumflex /Otilde /Odieresis /multiply 
+/Oslash /Ugrave /Uacute /Ucircumflex /Udieresis /Yacute /Thorn /germandbls 
+/agrave /aacute /acircumflex /atilde /adieresis /aring /ae /ccedilla 
+/egrave /eacute /ecircumflex /edieresis /igrave /iacute /icircumflex /idieresis 
+/eth /ntilde /ograve /oacute /ocircumflex /otilde /odieresis /divide 
+/oslash /ugrave /uacute /ucircumflex /udieresis /yacute /thorn /ydieresis 
+] def
+%%EndResource
+% Initialize page description variables.
+/sh 792 def
+/sw 612 def
+/llx 24 def
+/urx 588 def
+/ury 752 def
+/lly 40 def
+/#copies 1 def
+/th 20.000000 def
+/fnfs 15 def
+/bfs 11.547912 def
+/cw 6.928747 def
+
+% Dictionary for ISO-8859-1 support
+/iso1dict 6 dict begin
+  /fCourier ISO-8859-1Encoding /Courier reencode_font
+  /fCourier-Bold ISO-8859-1Encoding /Courier-Bold reencode_font
+  /fHelvetica ISO-8859-1Encoding /Helvetica reencode_font
+  /fHelvetica-Bold ISO-8859-1Encoding /Helvetica-Bold reencode_font
+  /fTimes-Bold ISO-8859-1Encoding /Times-Bold reencode_font
+  /fTimes-Roman ISO-8859-1Encoding /Times-Roman reencode_font
+currentdict end def
+/bgcolor [ 0 0 0 ] def
+/bg false def
+/ul false def
+/bx false def
+% The font for line numbering
+/f# /Helvetica findfont bfs .6 mul scalefont def
+/fSymbol /Symbol findfont def
+/hm fnfs 0.25 mul def
+/pw
+   cw 81.400000 mul
+def
+/ph
+   689.410325 th add
+def
+/pmw 0 def
+/pmh 0 def
+/v 0 def
+/x [
+  0
+] def
+/y [
+  pmh ph add 0 mul ph add
+] def
+/scx sw 2 div def
+/scy sh 2 div def
+/snx urx def
+/sny lly 2 add def
+/dx llx def
+/dy sny def
+/fnx scx def
+/fny dy def
+/lx snx def
+/ly ury fnfs 0.8 mul sub def
+/sx 0 def
+/tab 4 def
+/x0 0 def
+/y0 0 def
+%%EndSetup
+
+%%Page: (1) 1
+%%BeginPageSetup
+/pagesave save def
+%%EndPageSetup
+iso1dict begin
+gsave
+llx lly 0 add translate
+/v 0 store
+/x0 x v get 4.850123 add sx cw mul add store
+/y0 y v get bfs th add sub store
+x0 y0 moveto
+(/*********************) c n
+( * Convex Hull) N
+( * *******************/) N
+(// tested on ACM problem 11065) N
+(#include) K
+( <cstdio>) p n
+(#include) K
+( <cmath>) p n
+(#include) K
+( <algorithm>) p n
+(#include) K
+( <vector>) p n
+() N
+(using) K
+( ) p
+(namespace) K
+( std;) p n
+() N
+(class) K
+( Point {) p n
+(public) K
+(:) p n
+() S 4 T () S
+(int) k
+( x, y;) p n
+() N
+() S 4 T (Point \(\) {}) N
+() S 4 T (Point \() S
+(int) k
+( _x, ) p
+(int) k
+( _y\) : x\(_x\), y\(_y\) {}) p n
+(};) N
+() N
+(int) k
+( ccw\() p
+(const) K
+( Point &a, ) p
+(const) K
+( Point &b, ) p
+(const) K
+( Point &c\) {) p n
+() S 4 T () S
+(return) K
+( a.x * \(b.y - c.y\) + b.x * \(c.y - a.y\) + c.x * \(a.y - b.y\);) p n
+(}) N
+() N
+(double) k
+( dist\() p
+(const) K
+( Point &a, ) p
+(const) K
+( Point &b\) {) p n
+() S 4 T () S
+(return) K
+( sqrt\(\(a.x-b.x\)*\(a.x-b.x\) + \(a.y-b.y\)*\(a.y-b.y\)\);) p n
+(}) N
+() N
+(class) K
+( PointsCmp {) p n
+(public) K
+(:) p n
+() S 4 T (Point reference;) N
+() N
+() S 4 T () S
+(bool) k
+( ) p
+(operator) K
+( \(\) \() p
+(const) K
+( Point &a, ) p
+(const) K
+( Point &b\) {) p n
+() S 4 T () S 8 T () S
+(int) k
+( t = ccw\(reference, a, b\);) p n
+() S 4 T () S 8 T () S
+(if) K
+( \(t != 0\) ) p
+(return) K
+( t > 0;) p n
+() S 4 T () S 8 T () S
+(return) K
+( dist\(reference, a\) < dist\(reference, b\);) p n
+() S 4 T (}) N
+() N
+() S 4 T (PointsCmp\() S
+(const) K
+( Point &_reference\) : reference\(_reference\) {}) p n
+(};) N
+() N
+(class) K
+( Polygon {) p n
+(public) K
+(:) p n
+() S 4 T (vector <Point> points;) N
+() N
+() S 4 T (Polygon convexHull\(\) {) N
+() S 4 T () S 8 T (Polygon tmp = *) S
+(this) K
+(;) p n
+() N
+() S 4 T () S 8 T () S
+(for) K
+( \() p
+(int) k
+( i = 1; i < points.size\(\); ++i\) {) p n
+() S 4 T () S 8 T () S 12 T () S
+(if) K
+( \(tmp.points[i].y < tmp.points[0].y\) {) p n
+() S 4 T () S 8 T () S 12 T () S 16 T (swap\(tmp.points[i], tmp.points[0]\);) N
+() S 4 T () S 8 T () S 12 T (}) N
+() S 4 T () S 8 T (}) N
+() N
+() S 4 T () S 8 T (sort\(tmp.points.begin\(\)+1, tmp.points.end\(\), PointsCmp\(tmp.points[0]\)\);) N
+() N
+() S 4 T () S 8 T (Polygon hull;) N
+() N
+(        ) S
+(if) K
+( \(tmp.size\(\) < 3\) {) p n
+(            ) S
+(return) K
+( hull;) p n
+(convex_hull.cpp) () (Apr 12, 12 20:11) title
+border
+grestore
+end % of iso1dict
+pagesave restore
+showpage
+%%Page: (2) 2
+%%BeginPageSetup
+/pagesave save def
+%%EndPageSetup
+iso1dict begin
+gsave
+llx lly 0 add translate
+/v 0 store
+/x0 x v get 4.850123 add sx cw mul add store
+/y0 y v get bfs th add sub store
+x0 y0 moveto
+(        }) p n
+() N
+() S 4 T () S 8 T (hull.points.push_back\(tmp.points[0]\);) N
+() S 4 T () S 8 T (hull.points.push_back\(tmp.points[1]\);) N
+() S 4 T () S 8 T (hull.points.push_back\(tmp.points[2]\);) N
+() N
+() S 4 T () S 8 T () S
+(int) k
+( M = hull.points.size\(\);) p n
+() N
+() S 4 T () S 8 T () S
+(for) K
+( \() p
+(int) k
+( i = 3; i < points.size\(\); ++i\) {) p n
+() S 4 T () S 8 T () S 12 T () S
+(while) K
+( \(ccw\(hull.points[M-2], hull.points[M-1], tmp.points[i]\) < 0\) {) p n
+() S 4 T () S 8 T () S 12 T () S 16 T (hull.points.pop_back\(\);) N
+() S 4 T () S 8 T () S 12 T () S 16 T (--M;) N
+() S 4 T () S 8 T () S 12 T (}) N
+() S 4 T () S 8 T () S 12 T (hull.points.push_back\(tmp.points[i]\);) N
+() S 4 T () S 8 T () S 12 T (++M;) N
+() S 4 T () S 8 T (}) N
+() N
+() S 4 T () S 8 T () S
+(return) K
+( hull;) p n
+() S 4 T (}) N
+() N
+() S 4 T () S
+(double) k
+( area\(\) {) p n
+() S 4 T () S 8 T () S
+(int) k
+( retval = 0.0;) p n
+() S 4 T () S 8 T () S
+(for) K
+( \() p
+(int) k
+( i = 0; i < points.size\(\); ++i\) {) p n
+() S 4 T () S 8 T () S 12 T (retval += points[i].x * points[\(i+1\) % points.size\(\)].y - points[\(i+) N
+(1\) % points.size\(\)].x * points[i].y;) N
+() S 4 T () S 8 T (}) N
+() N
+() S 4 T () S 8 T () S
+(return) K
+( \(\(retval < 0\) ? -retval : retval\) / 2.0;) p n
+() S 4 T (}) N
+() N
+() S 4 T () S
+(void) k
+( output\(\) {) p n
+() S 4 T () S 8 T () S
+(for) K
+( \() p
+(int) k
+( i = 0; i < points.size\(\); ++i\) {) p n
+() S 4 T () S 8 T () S 12 T (printf\(") S
+(\(%d, %d\) ) str
+(", points[i].x, points[i].y\);) p n
+() S 4 T () S 8 T (}) N
+() S 4 T () S 8 T (printf\(") S
+(\\n) str
+("\);) p n
+() S 4 T (}) N
+(};) N
+() N
+(Polygon P;) N
+() N
+(bool) k
+( load\(\) {) p n
+() S 4 T () S
+(int) k
+( n;) p n
+() S 4 T (scanf\(") S
+(%d) str
+(", &n\);) p n
+() S 4 T (P.points.resize\(n\);) N
+() N
+() S 4 T () S
+(for) K
+( \() p
+(int) k
+( i = 0; i < n; ++i\) {) p n
+() S 4 T () S 8 T (scanf\(") S
+(%d%d) str
+(", &P.points[i].x, &P.points[i].y\);) p n
+() S 4 T (}) N
+() N
+() S 4 T () S
+(return) K
+( n;) p n
+(}) N
+() N
+(int) k
+( main\(\) {) p n
+() S 4 T () S
+(int) k
+( tilenum = 1;) p n
+() S 4 T () S
+(while) K
+( \(load\(\)\) {) p n
+() S 4 T () S 8 T (printf\(") S
+(Tile #%d\\nWasted Space = %.2lf %%\\n\\n) str
+(", tilenum++,  \(1.0 - \(P.area\(\) / P) p n
+(.convexHull\(\).area\(\)\)\) * 100.0\);) N
+() S 4 T (}) N
+() S 4 T () S
+(return) K
+( 0;) p n
+(convex_hull.cpp) () (Apr 12, 12 20:11) title
+border
+grestore
+end % of iso1dict
+pagesave restore
+showpage
+%%Page: (3) 3
+%%BeginPageSetup
+/pagesave save def
+%%EndPageSetup
+iso1dict begin
+gsave
+llx lly 0 add translate
+/v 0 store
+/x0 x v get 4.850123 add sx cw mul add store
+/y0 y v get bfs th add sub store
+x0 y0 moveto
+(}) p n
+(convex_hull.cpp) () (Apr 12, 12 20:11) title
+border
+grestore
+end % of iso1dict
+pagesave restore
+showpage
+%%Page: (1) 4
+%%BeginPageSetup
+/pagesave save def
+%%EndPageSetup
+iso1dict begin
+gsave
+llx lly 0 add translate
+/v 0 store
+/x0 x v get 4.850123 add sx cw mul add store
+/y0 y v get bfs th add sub store
+x0 y0 moveto
+(#include) K
+( <cmath>) p n
+(#include) K
+( <complex>) p n
+(#include) K
+( <vector>) p n
+(#include) K
+( <map>) p n
+() N
+(using) K
+( ) p
+(namespace) K
+( std;) p n
+() N
+(#define) K
+( EPS 1e-9) p n
+(#define) K
+( INF 1000000000) p n
+() N
+(typedef) K
+( complex<) p
+(double) k
+(> pt;) p n
+(typedef) K
+( pair<pt, ) p
+(double) k
+(> circle;) p n
+(typedef) K
+( pair<pt, pt> line;) p n
+(typedef) K
+( vector<pt> polygon;) p n
+(typedef) K
+( line seg;) p n
+() N
+(#define) K
+( det\(a, b\) imag\(conj\(a\)*\(b\)\)) p n
+(#define) K
+( dot\(a, b\) real\(conj\(a\)*\(b\)\)) p n
+(#define) K
+( sign\(a\) \(abs\(a\) < EPS ? 0 : a > 0 ? 1 : -1\)) p n
+(#define) K
+( signstar\(a\) \(sign\(a\) == -1 ? -1 : 1\)) p n
+() N
+(pt xLineLine\(line a, line b\)) N
+({) N
+() S 4 T () S
+(return) K n
+() p 4 T () S 8 T (\( det\(a.first, a.second\) * \(b.first - b.second\) - det\(b.first, b.second\)) N
+( * \(a.first - a.second\) \) / det\(a.first - a.second, b.first - b.second\) ;) N
+(}) N
+() N
+(bool) k
+( xPtSeg\(pt p, seg l\)) p n
+({) N
+() S 4 T () S
+(return) K
+( abs\(abs\(p - l.first\) + abs\(p - l.second\) - abs\(l.first - l.second\)\) <) p n
+( EPS;) N
+(}) N
+() N
+(bool) k
+( xPtSeg_open\(pt p, seg l\)) p n
+({) N
+() S 4 T () S
+(return) K n
+() p 4 T () S 8 T (abs\(p - l.first\) > EPS && ) N
+() S 4 T () S 8 T (abs\(p - l.second\) > EPS && ) N
+() S 4 T () S 8 T (xPtSeg\(p, l\);) N
+(}) N
+() N
+(bool) k
+( parallel\(line a, line b\)) p n
+({) N
+() S 4 T () S
+(return) K
+( abs\(det\(a.first - a.second, b.first - b.second\)\) < EPS;) p n
+(}) N
+() N
+(bool) k
+( xLineSeg\(line a, seg b, pt &x\)) p n
+({) N
+() S 4 T (x = xLineLine\(a, b\);) N
+() S 4 T () S
+(return) K
+( !parallel\(a, b\) && xPtSeg\(x, b\);) p n
+(}) N
+() N
+(bool) k
+( xLineSeg_open\(line a, seg b, pt &x\)) p n
+({) N
+() S 4 T (x = xLineLine\(a, b\);) N
+() S 4 T () S
+(return) K
+( !parallel\(a, b\) && xPtSeg_open\(x, b\);) p n
+(}) N
+() N
+(geom_intersect.cpp) () (Apr 12, 12 20:28) title
+border
+grestore
+end % of iso1dict
+pagesave restore
+showpage
+%%Page: (2) 5
+%%BeginPageSetup
+/pagesave save def
+%%EndPageSetup
+iso1dict begin
+gsave
+llx lly 0 add translate
+/v 0 store
+/x0 x v get 4.850123 add sx cw mul add store
+/y0 y v get bfs th add sub store
+x0 y0 moveto
+(bool) k
+( xPtLine\(pt p, line l\)) p n
+({) N
+() S 4 T () S
+(double) k n
+() p 4 T () S 8 T (da = abs\(p - l.first\),) N
+() S 4 T () S 8 T (db = abs\(p - l.second\),) N
+() S 4 T () S 8 T (dc = abs\(l.first - l.second\);) N
+() N
+() S 4 T () S
+(return) K
+( abs\(2 * \(da + db + dc\) - max\(da, max\(db, dc\)\)\) < EPS;) p n
+(}) N
+() N
+(double) k
+( ccw\(pt a, pt b, pt c\)) p n
+({) N
+() S 4 T () S
+(return) K
+( det\(a - b, c - a\);) p n
+(}) N
+() N
+(bool) k
+( comp_pt\() p
+(const) K
+( pt a, ) p
+(const) K
+( pt b\)) p n
+({) N
+() S 4 T () S
+(if) K
+( \(abs\(real\(a - b\)\) < EPS\)) p n
+() S 4 T () S 8 T () S
+(return) K
+( imag\(b - a\) > EPS;) p n
+() S 4 T () S
+(return) K
+( real\(b - a\) > EPS;) p n
+(}) N
+() N
+(/*) c n
+( * Assume p[0] == p[-1] ) N
+( * Tested: UVA 11460) N
+( */) N
+(vector<polygon> xLinePoly\(line l, polygon p\)) p n
+({) N
+() S 4 T (vector<polygon> x;) N
+() S 4 T (vector<vector<) S
+(int) k
+(> > s\(2, vector<) p
+(int) k
+(>\(\)\);) p n
+() S 4 T (vector<) S
+(int) k
+(> z;) p n
+() S 4 T (map<) S
+(int) k
+(, ) p
+(int) k
+(> z_map, pos;) p n
+() S 4 T (pt u;) N
+() S 4 T () S
+(double) k
+( c;) p n
+() N
+() S 4 T () S
+(for) K
+( \() p
+(int) k
+( i = 0; i < p.size\(\); i++\)) p n
+() S 4 T ({) N
+() S 4 T () S 8 T () S
+(if) K
+( \(i > 0 && xLineSeg_open\(l, line\(p[i - 1], p[i]\), u\)\)) p n
+() S 4 T () S 8 T () S 12 T (p.insert\(p.begin\(\) + i, u\);) N
+() N
+() S 4 T () S 8 T (c = ccw\(l.first, l.second, p[i]\);) N
+() S 4 T () S 8 T () S
+(if) K
+( \(c > -EPS\)) p n
+() S 4 T () S 8 T () S 12 T (s[0].push_back\(i\);) N
+() S 4 T () S 8 T () S
+(if) K
+( \(c < EPS\)) p n
+() S 4 T () S 8 T () S 12 T (s[1].push_back\(i\);) N
+() N
+() S 4 T () S 8 T () S
+(if) K
+( \(abs\(c\) < EPS\)) p n
+() S 4 T () S 8 T () S 12 T () S
+(if) K
+( \(z.size\(\) == 0 || comp_pt\(p[z.back\(\)], p[i]\)\)) p n
+() S 4 T () S 8 T () S 12 T () S 16 T (z.push_back\(i\);) N
+() S 4 T () S 8 T () S 12 T () S
+(else) K n
+() p 4 T () S 8 T () S 12 T ({) N
+() S 4 T () S 8 T () S 12 T () S 16 T () S
+(int) k
+( lo = 0, hi = z.size\(\), mid;) p n
+() S 4 T () S 8 T () S 12 T () S 16 T () S
+(while) K
+( \(hi - lo > 0\)) p n
+() S 4 T () S 8 T () S 12 T () S 16 T () S 20 T () S
+(if) K
+( \(comp_pt\(p[i], p[z[mid = \(hi + lo - 1\) / 2]]\)\)) p n
+() S 4 T () S 8 T () S 12 T () S 16 T () S 20 T () S 24 T (hi = mid;) N
+() S 4 T () S 8 T () S 12 T () S 16 T () S 20 T () S
+(else) K
+( ) p n
+() S 4 T () S 8 T () S 12 T () S 16 T () S 20 T () S 24 T (lo = mid + 1;) N
+() S 4 T () S 8 T () S 12 T () S 16 T (z.insert\(z.begin\(\) + lo, i\);) N
+() S 4 T () S 8 T () S 12 T (}) N
+(geom_intersect.cpp) () (Apr 12, 12 20:28) title
+border
+grestore
+end % of iso1dict
+pagesave restore
+showpage
+%%Page: (3) 6
+%%BeginPageSetup
+/pagesave save def
+%%EndPageSetup
+iso1dict begin
+gsave
+llx lly 0 add translate
+/v 0 store
+/x0 x v get 4.850123 add sx cw mul add store
+/y0 y v get bfs th add sub store
+x0 y0 moveto
+() p 4 T (}) N
+() N
+() S 4 T () S
+(for) K
+( \() p
+(int) k
+( i = 0; i < z.size\(\); i++\)) p n
+() S 4 T () S 8 T (z_map[z[i]] = i;) N
+() N
+() S 4 T () S
+(for) K
+( \() p
+(int) k
+( k = 0; k < s.size\(\); k++\)) p n
+() S 4 T ({) N
+() S 4 T () S 8 T () S
+(if) K
+( \(s[k].front\(\) != s[k].back\(\)\)) p n
+() S 4 T () S 8 T () S 12 T (s[k].push_back\(s[k].front\(\)\);) N
+() N
+() S 4 T () S 8 T () S
+(for) K
+( \() p
+(int) k
+( i = 1; i < s[k].size\(\); i++\)) p n
+() S 4 T () S 8 T () S 12 T () S
+(if) K
+( \(z_map.count\(s[k][i - 1]\) > 0 && z_map.count\(s[k][i]\) > 0\)) p n
+() S 4 T () S 8 T () S 12 T () S 16 T () S
+(for) K
+( \() p
+(int) k
+( j = z_map[s[k][i - 1]] + sign\(z_map[s[k][i]] - z_map[s[) p n
+(k][i - 1]]\); j != z_map[s[k][i]]; j += sign\(z_map[s[k][i]] - z_map[s[k][i - 1]]\)) N
+(\)) N
+() S 4 T () S 8 T () S 12 T () S 16 T () S 20 T (s[k].insert\(s[k].begin\(\) + i++, z[j]\);) N
+() N
+() S 4 T () S 8 T (pos.clear\(\);) N
+() S 4 T () S 8 T () S
+(for) K
+( \() p
+(int) k
+( i = 0; i < s[k].size\(\); i++\)) p n
+() S 4 T () S 8 T ({) N
+() S 4 T () S 8 T () S 12 T () S
+(if) K
+( \(pos.count\(s[k][i]\) != 0\)) p n
+() S 4 T () S 8 T () S 12 T ({) N
+() S 4 T () S 8 T () S 12 T () S 16 T (x.push_back\(polygon\(\)\);) N
+() S 4 T () S 8 T () S 12 T () S 16 T () S
+(for) K
+( \() p
+(int) k
+( j = pos[s[k][i]]; j < i; j++\)) p n
+() S 4 T () S 8 T () S 12 T () S 16 T () S 20 T (x.back\(\).push_back\(p[s[k][j = pos[s[k][j]]]]\);) N
+() S 4 T () S 8 T () S 12 T (}) N
+() S 4 T () S 8 T () S 12 T (pos[s[k][i]] = i;) N
+() S 4 T () S 8 T (}) N
+() S 4 T (}) N
+() N
+() S 4 T () S
+(for) K
+( \() p
+(int) k
+( i = x.size\(\) - 1; i >= 0; i--\)) p n
+() S 4 T () S 8 T () S
+(if) K
+( \(x[i].size\(\) < 3\)) p n
+() S 4 T () S 8 T () S 12 T (x.erase\(x.begin\(\) + i\);) N
+() S 4 T () S 8 T () S
+(else) K n
+() p 4 T () S 8 T () S 12 T (x[i].push_back\(x[i].front\(\)\);) N
+() N
+() S 4 T () S
+(return) K
+( x;) p n
+(}) N
+() N
+(/* True if p is on segment a-b.) c n
+( *  - Assume a != b) N
+( *  - True at endpoints      */) N
+(bool) k
+( xPtSeg\(pt p, pt a, pt b\)) p n
+({) N
+(    ) S
+(return) K n
+(        abs\(det\(p-a, b-a\)\) < EPS &&) p n
+(        dot\(p-a, b-a\) > -EPS &&) N
+(        dot\(p-b, a-b\) > -EPS ;) N
+(}) N
+() N
+(/* True if segment a-b intersects segment c-d ) c n
+( *  -- True at endpoints. */) N
+(bool) k
+( xSegSeg\(pt a, pt b, pt c, pt d\) ) p n
+({) N
+(    ) S
+(double) k n
+(        ta = det\(c-a, d-a\),) p n
+(        tb = det\(d-b, c-b\),) N
+(        tc = det\(a-c, b-c\),) N
+(        td = det\(b-d, a-d\) ;) N
+(geom_intersect.cpp) () (Apr 12, 12 20:28) title
+border
+grestore
+end % of iso1dict
+pagesave restore
+showpage
+%%Page: (4) 7
+%%BeginPageSetup
+/pagesave save def
+%%EndPageSetup
+iso1dict begin
+gsave
+llx lly 0 add translate
+/v 0 store
+/x0 x v get 4.850123 add sx cw mul add store
+/y0 y v get bfs th add sub store
+x0 y0 moveto
+(    ) p
+(return) K
+( ) p n
+(        xPtSeg\(a, c, d\) ||) N
+(        xPtSeg\(b, d, c\) ||) N
+(        xPtSeg\(c, a, b\) ||) N
+(        xPtSeg\(d, b, a\) ||) N
+(        sign\(ta\) && sign\(ta\) == sign\(tb\) &&) N
+(        sign\(tc\) && sign\(tc\) == sign\(td\) ;) N
+(}) N
+() N
+(/* True if segment a-b intersects segment c-d ) c n
+( *  -- False at endpoints.) N
+( *  -- False if segments are parallel. */) N
+(bool) k
+( xSegSeg_open\(pt a, pt b, pt c, pt d\) ) p n
+({) N
+(    ) S
+(double) k
+( ) p n
+(        ta = det\(c-a, d-a\),) N
+(        tb = det\(d-b, c-b\),) N
+(        tc = det\(a-c, b-c\),) N
+(        td = det\(b-d, a-d\) ;) N
+(    ) S
+(return) K
+( ) p n
+(        sign\(ta\) && sign\(ta\) == sign\(tb\) &&) N
+(        sign\(tc\) && sign\(tc\) == sign\(td\) ;) N
+(}) N
+() N
+(/* True if segment a-b intersects segment c-d ) c n
+( *  -- Assumes that colinear and corner cases never occur. */) N
+(bool) k
+( xSegSeg_simple\(pt a, pt b, pt c, pt d\) ) p n
+({) N
+(    ) S
+(return) K
+( ) p n
+(        det\(c-a, d-a\) > EPS == det\(d-b, c-b\) > EPS &&) N
+(        det\(a-c, b-c\) > EPS == det\(b-d, a-d\) > EPS ;) N
+(}) N
+() N
+(/* True if segment a-b intersects segment c-d ) c n
+( *  -- Assumes that colinear and corner cases never occur.) N
+( *  -- Cheesy method using xLineLine                        ) N
+( *     This also applies to closed corners, xSegLine, etc, but) N
+( *          colinear cases need to be a special case           */) N
+(// NOT TESTED) N
+(bool) k
+( xSegSeg_simple2\(pt a, pt b, pt c, pt d\) ) p n
+({) N
+(    pt x = ) N
+(        \( det\(a, b\) * \(c - d\) - det\(c, d\) * \(a - b\) \)) N
+(            / det\(a-b, c-d\) ;) N
+(    ) S
+(double) k
+( s = real\(\(x-a\)/\(b-a\)\), ) p n
+(           t = real\(\(x-c\)/\(d-c\)\) ;) N
+(    ) S
+(return) K
+( ) p n
+(        EPS < s && s < 1-EPS &&) N
+(        EPS < t && t < 1-EPS   ;) N
+(}) N
+() N
+(/* True if segment a-b intersects line --c-d-- ) c n
+( *  -- Assumes that colinear and corner cases never occur. */) N
+(// Tested by ICPC 2005 Finals - GSM) N
+(bool) k
+( xSegLine_simple\(pt a, pt b, pt c, pt d\) ) p n
+({) N
+(    ) S
+(return) K
+( ) p n
+(        det\(c-a,d-a\) > EPS == det\(d-b,c-b\) > EPS ;) N
+(}) N
+(geom_intersect.cpp) () (Apr 12, 12 20:28) title
+border
+grestore
+end % of iso1dict
+pagesave restore
+showpage
+%%Page: (5) 8
+%%BeginPageSetup
+/pagesave save def
+%%EndPageSetup
+iso1dict begin
+gsave
+llx lly 0 add translate
+/v 0 store
+/x0 x v get 4.850123 add sx cw mul add store
+/y0 y v get bfs th add sub store
+x0 y0 moveto
+() p n
+(/* Intersection of line a-b and line c-d) c n
+( *  -- Returns an "invalid" complex if a-b c-d parallel. ) N
+( */) N
+(pt xLineLine\(pt a, pt b, pt c, pt d\)) p n
+({) N
+(    ) S
+(//assert\( abs\(det\(a-b, c-d\)\) > EPS \);) c n
+() p n
+(    ) S
+(return) K
+( ) p n
+(        \( det\(a, b\) * \(c - d\) - det\(c, d\) * \(a - b\) \)) N
+(            / det\(a-b, c-d\) ;) N
+(}) N
+() N
+(void) k
+( perp_bisector\(pt a, pt b, pt &m, pt &d\)) p n
+({) N
+() S 4 T (m = \(a + b\) / pt\(2.0, 0.0\);) N
+() S 4 T (d = \(b - a\) * pt\(0.0, 1.0\);) N
+(}) N
+() N
+(/* Intersection of a line and a circle) c n
+( *  -- Returns the number of points of intersection, 0, 1 or 2) N
+( *  -- Populates points a and b with the points of intersection) N
+( *  Tested: UVA 11037) N
+( */) N
+(int) k
+( xLineCircle\(line x, circle y, pt &a, pt &b\)) p n
+({) N
+() S 4 T () S
+(double) k
+( dpl = det\(x.second - x.first, y.first - x.first\) / abs\(x.second - x.f) p n
+(irst\);) N
+() S 4 T (pt m, d;) N
+() S 4 T (perp_bisector\(x.first, x.second, m, d\);) N
+() S 4 T (pt i = y.first - d * dpl / abs\(d\);) N
+() N
+() S 4 T () S
+(if) K
+( \(abs\(abs\(dpl\) - y.second\) < EPS\)) p n
+() S 4 T ({) N
+() S 4 T () S 8 T (a = i;) N
+() S 4 T () S 8 T () S
+(return) K
+( 1;) p n
+() S 4 T (}) N
+() S 4 T () S
+(else) K
+( ) p
+(if) K
+( \(abs\(dpl\) < y.second - EPS\)) p n
+() S 4 T ({) N
+() S 4 T () S 8 T () S
+(double) k
+( h = sqrt\(y.second * y.second - dpl * dpl\);) p n
+() S 4 T () S 8 T (a = i + h * \(x.second - x.first\) / abs\(x.second - x.first\);) N
+() S 4 T () S 8 T (b = i - h * \(x.second - x.first\) / abs\(x.second - x.first\);) N
+() S 4 T () S 8 T () S
+(return) K
+( 2;) p n
+() S 4 T (}) N
+() S 4 T () S
+(else) K n
+() p 4 T ({) N
+() S 4 T () S 8 T () S
+(return) K
+( 0;) p n
+() S 4 T (}) N
+(}) N
+() N
+(/* Intersection of two circles) c n
+( *  -- Returns the number of points of intersection, 0, 1 or 2 or INF) N
+( *  -- Populates points m and n with the points of intersection) N
+( *  Tested: UVA 11037) N
+( */) N
+(int) k
+( xCircleCircle\(circle x, circle y, pt &m, pt &n\)) p n
+({) N
+() S 4 T () S
+(double) k
+( d = abs\(x.first - y.first\);) p n
+() S 4 T () S
+(if) K
+( \(abs\(x.second - y.second\) < EPS && abs\(x.first - y.first\) < EPS\)) p n
+(geom_intersect.cpp) () (Apr 12, 12 20:28) title
+border
+grestore
+end % of iso1dict
+pagesave restore
+showpage
+%%Page: (6) 9
+%%BeginPageSetup
+/pagesave save def
+%%EndPageSetup
+iso1dict begin
+gsave
+llx lly 0 add translate
+/v 0 store
+/x0 x v get 4.850123 add sx cw mul add store
+/y0 y v get bfs th add sub store
+x0 y0 moveto
+() p 4 T ({) N
+() S 4 T () S 8 T () S
+(return) K
+( INF;) p n
+() S 4 T (}) N
+() S 4 T () S
+(else) K
+( ) p
+(if) K
+( \(abs\(x.second + y.second - d\) < EPS\)) p n
+() S 4 T ({) N
+() S 4 T () S 8 T (m = \(x.first + y.first\) / pt\(2.0, 0.0\);) N
+() S 4 T () S 8 T () S
+(return) K
+( 1;) p n
+() S 4 T (}) N
+() S 4 T () S
+(else) K
+( ) p
+(if) K
+( \(d < x.second + y.second - EPS && d > abs\(x.second - y.second\) + EPS) p n
+(\)) N
+() S 4 T ({) N
+() S 4 T () S 8 T () S
+(double) k
+( a = \(x.second * x.second - y.second * y.second + d * d\) / \(2 * d\)) p n
+(;) N
+() S 4 T () S 8 T () S
+(double) k
+( h = sqrt\(x.second * x.second - a * a\);) p n
+() S 4 T () S 8 T (pt p = x.first + a * \(y.first - x.first\) / d;) N
+() S 4 T () S 8 T (m = pt\(real\(p\) + h * \(imag\(y.first\) - imag\(x.first\)\) / d, imag\(p\) - h * ) N
+(\(real\(y.first\) - real\(x.first\)\) / d\);) N
+() S 4 T () S 8 T (n = pt\(real\(p\) - h * \(imag\(y.first\) - imag\(x.first\)\) / d, imag\(p\) + h * ) N
+(\(real\(y.first\) - real\(x.first\)\) / d\);) N
+() S 4 T () S 8 T () S
+(return) K
+( 2;) p n
+() S 4 T (}) N
+() S 4 T () S
+(else) K n
+() p 4 T ({) N
+() S 4 T () S 8 T () S
+(return) K
+( 0;) p n
+() S 4 T (}) N
+(}) N
+() N
+(/*$*/) c n
+(int) k
+( main\(\)) p n
+({) N
+() S 4 T () S
+(return) K
+( 0;) p n
+(}) N
+(/*$*/) c n
+(geom_intersect.cpp) () (Apr 12, 12 20:28) title
+border
+grestore
+end % of iso1dict
+pagesave restore
+showpage
+%%Page: (1) 10
+%%BeginPageSetup
+/pagesave save def
+%%EndPageSetup
+iso1dict begin
+gsave
+llx lly 0 add translate
+/v 0 store
+/x0 x v get 4.850123 add sx cw mul add store
+/y0 y v get bfs th add sub store
+x0 y0 moveto
+(#include) K
+( <vector>) p n
+(#include) K
+( <complex>) p n
+(#include) K
+( <cmath>) p n
+() N
+(using) K
+( ) p
+(namespace) K
+( std;) p n
+() N
+(#define) K
+( EPS 1E-9) p n
+(#define) K
+( det\(a, b\) imag\(conj\(a\)*\(b\)\)) p n
+(#define) K
+( dot\(a, b\) real\(conj\(a\)*\(b\)\)) p n
+(#define) K
+( sign\(a\) \(abs\(a\) < EPS ? 0 : a > 0 ? 1 : -1\)) p n
+(#define) K
+( signstar\(a\) \(sign\(a\) == -1 ? -1 : 1\)) p n
+() N
+(#define) K
+( PI \(2.0 * acos\(0.0\)\)) p n
+(#define) K
+( sq\(x\) \(\(x\) * \(x\)\)) p n
+(#define) K
+( law_of_cosines\(a, b, c\) acos\(min\(max\(\(sq\(a\) + sq\(b\) - sq\(c\)\) / \(2 * \(a\) ) p n
+(* \(b\)\), -1.0\), 1.0\)\)) N
+() N
+(typedef) K
+( complex<) p
+(double) k
+(> pt;) p n
+(typedef) K
+( pair<pt, pt> line;) p n
+(typedef) K
+( vector<pt> polygon;) p n
+(typedef) K
+( line seg;) p n
+() N
+(/*) c n
+( * Assume V[0] == V[-1] ) N
+( */) N
+(double) k
+( signed_area\(polygon &V\) {) p n
+() S 4 T () S
+(double) k
+( A = 0.0;) p n
+() S 4 T () S
+(for) K
+( \() p
+(unsigned) k
+( i = 1; i < V.size\(\); i++\)) p n
+() S 4 T () S 8 T (A += det\(V[i - 1], V[i]\);) N
+() S 4 T () S
+(return) K
+( A / 2;) p n
+(}) N
+() N
+(/*) c n
+( * Assume V[0] == V[-1] ) N
+( */) N
+(pt centroid\(polygon &V\) {) p n
+() S 4 T (pt c = pt\(0.0, 0.0\);) N
+() S 4 T () S
+(for) K
+( \() p
+(unsigned) k
+( i = 1; i < V.size\(\); i++\)) p n
+() S 4 T () S 8 T (c += \(V[i - 1] + V[i]\) * pt\(det\(V[i - 1], V[i]\), 0.0\);) N
+() S 4 T () S
+(return) K
+( c / pt\(6 * signed_area\(V\), 0.0\);) p n
+(}) N
+() N
+(#define) K
+( det\(a, b\) imag\(conj\(a\)*\(b\)\)) p n
+() N
+(/* Returns 2 * \(area of polygon V\)) c n
+( *  - Assumes V[0] == V[-1]) N
+( */) N
+(double) k
+( area_polygon\(polygon &V\) {) p n
+(    ) S
+(double) k
+( A = 0.0;) p n
+(    ) S
+(for) K
+( \() p
+(unsigned) k
+( i = 1; i < V.size\(\); i++\)) p n
+(        A += det\(V[i - 1], V[i]\);) N
+(    ) S
+(return) K
+( abs\(A\);) p n
+(}) N
+() N
+(/*  - Assumes convex V in ccw order) c n
+( *  - Assumes V[0] == V[-1]) N
+( */) N
+(bool) k
+( inside_convex\(pt p, polygon& V\) {) p n
+(    ) S
+(for) K
+( \() p
+(unsigned) k
+( i = 1; i < V.size\(\); i++\)) p n
+(geom_poly.cpp) () (Apr 12, 12 20:28) title
+border
+grestore
+end % of iso1dict
+pagesave restore
+showpage
+%%Page: (2) 11
+%%BeginPageSetup
+/pagesave save def
+%%EndPageSetup
+iso1dict begin
+gsave
+llx lly 0 add translate
+/v 0 store
+/x0 x v get 4.850123 add sx cw mul add store
+/y0 y v get bfs th add sub store
+x0 y0 moveto
+(        ) p
+(if) K
+( \(det\(V[i] - V[i - 1], p - V[i - 1]\) < -EPS\)) p n
+(            ) S
+(return) K
+( ) p
+(false) k
+(;) p n
+(    ) S
+(return) K
+( ) p
+(true) k
+(;) p n
+(}) N
+() N
+(/*) c n
+( * Tests whether p is in simple polygon V) N
+( *  - Assumes V[0] == V[-1]) N
+( *  - Assumes p does not intersect V) N
+( *  - Assumes segment p-q does not intersect corners) N
+( *  - Assumes q is large enough) N
+( */) N
+(bool) k
+( inside_polygon\(pt p, polygon& V\) {) p n
+(    pt q = polar\(1e8, 1.2345\);) N
+(    ) S
+(int) k
+( s = 0;) p n
+(    ) S
+(for) K
+( \() p
+(int) k
+( i = 1; i < V.size\(\); i++\)) p n
+(        s += xSegSeg\(p, q, V[i - 1], V[i]\);) N
+(    ) S
+(return) K
+( s % 2 == 1;) p n
+(}) N
+() N
+(double) k
+( pack_in_cirlce\(vector<) p
+(int) k
+(> &side_lengths\)) p n
+({) N
+() S 4 T () S
+(double) k
+( max_lo = 0.0, max_hi = 0.0, lo, hi, r, alpha;) p n
+() S 4 T () S
+(int) k
+( max_i;) p n
+() S 4 T () S
+(bool) k
+( outside = ) p
+(true) k
+(;) p n
+() N
+() S 4 T () S
+(for) K
+( \() p
+(int) k
+( i = 0; i < side_lengths.size\(\); i++\)) p n
+() S 4 T ({) N
+() S 4 T () S 8 T () S
+(if) K
+( \(0.5 * side_lengths[i] > max_lo\)) p n
+() S 4 T () S 8 T ({) N
+() S 4 T () S 8 T () S 12 T (lo = max_lo = 0.5 * side_lengths[i];) N
+() S 4 T () S 8 T () S 12 T (max_i = i;) N
+() S 4 T () S 8 T (}) N
+() S 4 T () S 8 T (hi = max_hi += 2.0 * side_lengths[i];) N
+() S 4 T (}) N
+() N
+() S 4 T () S
+(while) K
+( \(abs\(hi - lo\) > EPS || \(outside && lo < max_lo + EPS\)\)) p n
+() S 4 T ({) N
+() S 4 T () S 8 T () S
+(if) K
+( \(outside && abs\(hi - lo\) < EPS && lo < max_lo + EPS\)) p n
+() S 4 T () S 8 T ({) N
+() S 4 T () S 8 T () S 12 T (lo = max_lo;) N
+() S 4 T () S 8 T () S 12 T (hi = max_hi;) N
+() S 4 T () S 8 T () S 12 T (outside = ) S
+(false) k
+(;) p n
+() S 4 T () S 8 T (}) N
+() N
+() S 4 T () S 8 T (r = \(hi + lo\) / 2.0;) N
+() S 4 T () S 8 T (alpha = 0.0;) N
+() N
+() S 4 T () S 8 T () S
+(for) K
+( \() p
+(int) k
+( i = 0; i < n; i++\)) p n
+() S 4 T () S 8 T () S 12 T (alpha += \(outside || i != max_i ? 1.0 : -1.0\) * law_of_cosines\(r, r,) N
+( L[i]\);) N
+() N
+() S 4 T () S 8 T () S
+(if) K
+( \(outside ? alpha < 2 * PI : alpha > EPS\)) p n
+() S 4 T () S 8 T () S 12 T (hi = r;) N
+() S 4 T () S 8 T () S
+(else) K n
+() p 4 T () S 8 T () S 12 T (lo = r;) N
+() S 4 T (}) N
+() N
+() S 4 T () S
+(double) k
+( area = 0.0;) p n
+(geom_poly.cpp) () (Apr 12, 12 20:28) title
+border
+grestore
+end % of iso1dict
+pagesave restore
+showpage
+%%Page: (3) 12
+%%BeginPageSetup
+/pagesave save def
+%%EndPageSetup
+iso1dict begin
+gsave
+llx lly 0 add translate
+/v 0 store
+/x0 x v get 4.850123 add sx cw mul add store
+/y0 y v get bfs th add sub store
+x0 y0 moveto
+() p 4 T () S
+(for) K
+( \() p
+(int) k
+( i = 0; i < n; i++\)) p n
+() S 4 T () S 8 T (area += \(outside || i != max_i ? 1.0 : -1.0\) * 0.5 * r * r * sin\(law_of_) N
+(cosines\(r, r, L[i]\)\);) N
+() S 4 T () S
+(return) K
+( area;) p n
+(}) N
+() N
+(/*$*/) c n
+(int) k
+( main\(\) {) p n
+() S 4 T () S
+(return) K
+( 0;) p n
+(}) N
+(/*$*/) c n
+(geom_poly.cpp) () (Apr 12, 12 20:28) title
+border
+grestore
+end % of iso1dict
+pagesave restore
+showpage
+%%Page: (1) 13
+%%BeginPageSetup
+/pagesave save def
+%%EndPageSetup
+iso1dict begin
+gsave
+llx lly 0 add translate
+/v 0 store
+/x0 x v get 4.850123 add sx cw mul add store
+/y0 y v get bfs th add sub store
+x0 y0 moveto
+(/*********************) c n
+( *     Hungarian ) N
+( * *******************/) N
+(// tested on ACM ICPC live problem 3198) N
+(#include) K
+( <cstdio>) p n
+(#include) K
+( <vector>) p n
+(#include) K
+( <algorithm>) p n
+(#include) K
+( <cmath>) p n
+(#include) K
+( <queue>) p n
+() N
+(using) K
+( ) p
+(namespace) K
+( std;) p n
+() N
+(#define) K
+( MAX_R 100 ) p
+(// mora biti >= MAX_C) c n
+(#define) K
+( MAX_C 100) p n
+(#define) K
+( VELIKO 1000000) p n
+() N
+(bool) k
+( zero\() p
+(int) k
+( x\) { ) p
+(return) K
+( x == 0; }) p n
+(bool) k
+( zero\() p
+(double) k
+( x\) {) p
+(return) K
+( fabs\(x\) < 1e-12; }) p n
+() N
+(template) K
+( <) p
+(typename) k
+( tip>) p n
+(struct) k
+( hungarian {) p n
+() S 4 T () S
+(int) k
+( n, m;) p n
+() S 4 T (tip costs[MAX_R][MAX_C]; ) S
+(// pocente vrijednosti NE OSTAJU ocuvane) c n
+() p 4 T () S
+(bool) k
+( ret[MAX_R][MAX_C]; ) p
+(// na kraju, jedinice su matching) c n
+() p 4 T () S
+(int) k
+( stars;) p n
+() S 4 T () S
+(int) k
+( star_r[MAX_R], star_c[MAX_C];) p n
+() S 4 T () S
+(int) k
+( prime_r[MAX_R], prime_c[MAX_C];) p n
+() S 4 T () S
+(int) k
+( cover_r[MAX_R], cover_c[MAX_C];) p n
+() S 4 T () N
+() S 4 T () S
+(void) k
+( matching\(\) {) p n
+() S 4 T () S 8 T () S
+(for) K
+( \( ; n < m; ++n\) ) p n
+() S 4 T () S 8 T () S 12 T () S
+(for) K
+( \() p
+(int) k
+( c = 0; c < m; ++c\) ) p n
+() S 4 T () S 8 T () S 12 T () S 16 T (costs[n][c] = 0;) N
+() S 4 T () S 8 T () S
+(for) K
+( \() p
+(int) k
+( r = 0; r < n; ++r\) { star_r[r] = -1; cover_r[r] = 0; }) p n
+() S 4 T () S 8 T () S
+(for) K
+( \() p
+(int) k
+( c = 0; c < m; ++c\) { star_c[c] = -1; cover_c[c] = 0; }) p n
+() S 4 T () S 8 T (stars = 0;) N
+() S 4 T () S 8 T (step1\(\);) N
+() S 4 T (}) N
+() N
+() S 4 T () S
+(void) k
+( step1\(\) {) p n
+() S 4 T () S 8 T () S
+(for) K
+( \() p
+(int) k
+( r = 0; r < n; ++r\) {) p n
+() S 4 T () S 8 T () S 12 T (tip mini = VELIKO;) N
+() S 4 T () S 8 T () S 12 T () S
+(for) K
+( \() p
+(int) k
+( c = 0; c < m; ++c\) mini = min\(mini, costs[r][c]\);) p n
+() S 4 T () S 8 T () S 12 T () S
+(for) K
+( \() p
+(int) k
+( c = 0; c < m; ++c\) costs[r][c] -= mini;) p n
+() S 4 T () S 8 T (}) N
+() S 4 T () S 8 T (step2\(\);) N
+() S 4 T (}) N
+() N
+() S 4 T () S
+(void) k
+( step2\(\) {) p n
+() S 4 T () S 8 T () S
+(for) K
+( \() p
+(int) k
+( r = 0; r < n; ++r\) {) p n
+() S 4 T () S 8 T () S 12 T () S
+(for) K
+( \() p
+(int) k
+( c = 0; c < m; ++c\) {) p n
+() S 4 T () S 8 T () S 12 T () S 16 T () S
+(if) K
+( \(star_c[c] != -1\) ) p
+(continue) K
+(;) p n
+() S 4 T () S 8 T () S 12 T () S 16 T () S
+(if) K
+( \(!zero\(costs[r][c]\)\) ) p
+(continue) K
+(;) p n
+() S 4 T () S 8 T () S 12 T () S 16 T (star_r[r] = c;) N
+() S 4 T () S 8 T () S 12 T () S 16 T (star_c[c] = r;) N
+() S 4 T () S 8 T () S 12 T () S 16 T (++stars;) N
+() S 4 T () S 8 T () S 12 T () S 16 T () S
+(break) K
+(;) p n
+() S 4 T () S 8 T () S 12 T (}) N
+() S 4 T () S 8 T (}) N
+(hungarian.cpp) () (Apr 12, 12 20:11) title
+border
+grestore
+end % of iso1dict
+pagesave restore
+showpage
+%%Page: (2) 14
+%%BeginPageSetup
+/pagesave save def
+%%EndPageSetup
+iso1dict begin
+gsave
+llx lly 0 add translate
+/v 0 store
+/x0 x v get 4.850123 add sx cw mul add store
+/y0 y v get bfs th add sub store
+x0 y0 moveto
+() p 4 T () S 8 T (step3\(\);) N
+() S 4 T (}) N
+() N
+() S 4 T () S
+(void) k
+( step3\(\) {) p n
+() S 4 T () S 8 T () S
+(if) K
+( \(stars == m\) {) p n
+() S 4 T () S 8 T () S 12 T () S
+(for) K
+( \() p
+(int) k
+( r = 0; r < n; ++r\)) p n
+() S 4 T () S 8 T () S 12 T () S 16 T () S
+(for) K
+( \() p
+(int) k
+( c = 0; c < m; ++c\)) p n
+() S 4 T () S 8 T () S 12 T () S 16 T () S 20 T (ret[r][c] = \(star_r[r] == c\);) N
+() S 4 T () S 8 T () S 12 T () S
+(return) K
+(; ) p
+(// zavrsetak algoritma) c n
+() p 4 T () S 8 T (}) N
+() S 4 T () S 8 T () S
+(for) K
+( \() p
+(int) k
+( r = 0; r < n; ++r\) cover_r[r] = 0;) p n
+() S 4 T () S 8 T () S
+(for) K
+( \() p
+(int) k
+( c = 0; c < m; ++c\) cover_c[c] = star_c[c] != -1;) p n
+() N
+() S 4 T () S 8 T (step4\(\);) N
+() S 4 T (}) N
+() N
+() S 4 T () S
+(void) k
+( step4\(\) {) p n
+() S 4 T () S 8 T (queue <) S
+(int) k
+(> Q;) p n
+() S 4 T () S 8 T () S
+(for) K
+( \() p
+(int) k
+( c = 0; c < m; ++c\) ) p
+(if) K
+( \(!cover_c[c]\) Q.push\(c\);) p n
+() N
+() S 4 T () S 8 T () S
+(for) K
+( \(; !Q.empty\(\); Q.pop\(\)\) {) p n
+() S 4 T () S 8 T () S 12 T () S
+(int) k
+( c = Q.front\(\);) p n
+() S 4 T () S 8 T () S 12 T () S
+(for) K
+( \() p
+(int) k
+( r = 0; r < n; ++r\) {) p n
+() S 4 T () S 8 T () S 12 T () S 16 T () S
+(if) K
+( \(cover_r[r]\) ) p
+(continue) K
+(;) p n
+() S 4 T () S 8 T () S 12 T () S 16 T () S
+(if) K
+( \(!zero\(costs[r][c]\)\) ) p
+(continue) K
+(;) p n
+() S 4 T () S 8 T () S 12 T () S 16 T () S
+(if) K
+( \(star_r[r] != -1\) {) p n
+() S 4 T () S 8 T () S 12 T () S 16 T () S 20 T (cover_c[star_r[r]] = 0;) N
+() S 4 T () S 8 T () S 12 T () S 16 T () S 20 T (cover_r[r] = 1;) N
+() S 4 T () S 8 T () S 12 T () S 16 T () S 20 T (prime_r[r] = c;) N
+() S 4 T () S 8 T () S 12 T () S 16 T () S 20 T (prime_c[c] = r;) N
+() S 4 T () S 8 T () S 12 T () S 16 T () S 20 T (Q.push\(star_r[r]\);) N
+() S 4 T () S 8 T () S 12 T () S 16 T (} ) S
+(else) K
+( {) p n
+() S 4 T () S 8 T () S 12 T () S 16 T () S 20 T (step5\(r, c\);) N
+() S 4 T () S 8 T () S 12 T () S 16 T () S 20 T () S
+(return) K
+(;) p n
+() S 4 T () S 8 T () S 12 T () S 16 T (}) N
+() S 4 T () S 8 T () S 12 T (}) N
+() S 4 T () S 8 T (}) N
+() S 4 T () S 8 T (tip mini = VELIKO;) N
+() S 4 T () S 8 T () S
+(for) K
+( \() p
+(int) k
+( r = 0; r < n; ++r\) {) p n
+() S 4 T () S 8 T () S 12 T () S
+(if) K
+( \(!cover_r[r]\) ) p n
+() S 4 T () S 8 T () S 12 T () S 16 T () S
+(for) K
+( \() p
+(int) k
+( c = 0; c < m; ++c\) ) p n
+() S 4 T () S 8 T () S 12 T () S 16 T () S 20 T () S
+(if) K
+( \(!cover_c[c]\)) p n
+() S 4 T () S 8 T () S 12 T () S 16 T () S 20 T () S 24 T (mini = min\(mini, costs[r][c]\);) N
+() S 4 T () S 8 T (}) N
+() S 4 T () S 8 T (step6\(mini\);) N
+() S 4 T (}) N
+() S 4 T () S
+(void) k
+( step5\() p
+(int) k
+( r, ) p
+(int) k
+( c\) {) p n
+() S 4 T () S 8 T () S
+(while) K
+( \(star_c[c] != -1\) {) p n
+() S 4 T () S 8 T () S 12 T () S
+(int) k
+( tmp_r = star_c[c];) p n
+() S 4 T () S 8 T () S 12 T (star_r[r] = c;) N
+() S 4 T () S 8 T () S 12 T (star_c[c] = r;) N
+() S 4 T () S 8 T () S 12 T (c = prime_r[tmp_r];) N
+() S 4 T () S 8 T () S 12 T (r = tmp_r;) N
+() S 4 T () S 8 T (}) N
+() S 4 T () S 8 T (star_r[r] = c;) N
+() S 4 T () S 8 T (star_c[c] = r;) N
+() S 4 T () S 8 T (stars++;) N
+() S 4 T () S 8 T (step3\(\);) N
+() S 4 T (}) N
+(hungarian.cpp) () (Apr 12, 12 20:11) title
+border
+grestore
+end % of iso1dict
+pagesave restore
+showpage
+%%Page: (3) 15
+%%BeginPageSetup
+/pagesave save def
+%%EndPageSetup
+iso1dict begin
+gsave
+llx lly 0 add translate
+/v 0 store
+/x0 x v get 4.850123 add sx cw mul add store
+/y0 y v get bfs th add sub store
+x0 y0 moveto
+() p 4 T () S
+(void) k
+( step6\(tip mini\) {) p n
+() S 4 T () S 8 T () S
+(for) K
+( \() p
+(int) k
+( r = 0; r < n; ++r\)) p n
+() S 4 T () S 8 T () S 12 T () S
+(for) K
+( \() p
+(int) k
+( c = 0; c < m; ++c\) ) p n
+() S 4 T () S 8 T () S 12 T () S 16 T () S
+(if) K
+( \(cover_r[r] && cover_c[c]\) costs[r][c] += mini;) p n
+() S 4 T () S 8 T () S 12 T () S 16 T () S
+(else) K
+( ) p
+(if) K
+( \(!cover_r[r] && !cover_c[c]\) costs[r][c] -= mini;) p n
+() S 4 T () S 8 T (step4\(\);) N
+() S 4 T (}) N
+(};) N
+() N
+() N
+(hungarian <) S
+(int) k
+(> H;) p n
+(char) k
+( ploca[100][100];) p n
+(int) k
+( N, M;) p n
+() N
+(bool) k
+( load\(\) {) p n
+() S 4 T (scanf\(") S
+(%d%d) str
+(", &N, &M\);) p n
+() N
+() S 4 T () S
+(for) K
+( \() p
+(int) k
+( i = 0; i < N; ++i\) {) p n
+() S 4 T () S 8 T (scanf\(") S
+(%s) str
+(", ploca[i]\);) p n
+() S 4 T (}) N
+() N
+() S 4 T () S
+(return) K
+( N+M;) p n
+(}) N
+() N
+(int) k
+( my_abs\() p
+(int) k
+( x\) { ) p
+(return) K
+( x < 0 ? -x : x; }) p n
+(int) k
+( dist\(pair <) p
+(int) k
+(, ) p
+(int) k
+(> a, pair <) p
+(int) k
+(, ) p
+(int) k
+(> b\) {) p n
+() S 4 T () S
+(return) K
+( my_abs\(a.first - b.first\) + my_abs\(a.second - b.second\);) p n
+(}) N
+(vector <pair <) S
+(int) k
+(, ) p
+(int) k
+(> > houses, men;) p n
+() N
+(void) k
+( generate_costs\(\) {) p n
+() S 4 T (houses.clear\(\); men.clear\(\);) N
+() N
+() S 4 T () S
+(for) K
+( \() p
+(int) k
+( i = 0; i < N; ++i\) {) p n
+() S 4 T () S 8 T () S
+(for) K
+( \() p
+(int) k
+( j = 0; j < M; ++j\) {) p n
+() S 4 T () S 8 T () S 12 T () S
+(if) K
+( \(ploca[i][j] == ') p
+(H) str
+('\) houses.push_back\(make_pair\(i, j\)\);) p n
+() S 4 T () S 8 T () S 12 T () S
+(if) K
+( \(ploca[i][j] == ') p
+(m) str
+('\) men.push_back\(make_pair\(i, j\)\);) p n
+() S 4 T () S 8 T (}) N
+() S 4 T (}) N
+() N
+() S 4 T (H.n = H.m = houses.size\(\);) N
+() S 4 T () S
+(for) K
+( \() p
+(int) k
+( i = 0; i < houses.size\(\); ++i\) {) p n
+() S 4 T () S 8 T () S
+(for) K
+( \() p
+(int) k
+( j = 0; j < men.size\(\); ++j\) {) p n
+() S 4 T () S 8 T () S 12 T (H.costs[i][j] = dist\(houses[i], men[j]\);) N
+() S 4 T () S 8 T (}) N
+() S 4 T (}) N
+(}) N
+() N
+(int) k
+( main\(\) {) p n
+() S 4 T () S
+(while) K
+( \(load\(\)\) {) p n
+() S 4 T () S 8 T (generate_costs\(\);) N
+() S 4 T () S 8 T (H.matching\(\);) N
+() S 4 T () S 8 T () S
+(int) k
+( sol = 0;) p n
+() S 4 T () S 8 T () S
+(for) K
+( \() p
+(int) k
+( i = 0; i < houses.size\(\); ++i\) {) p n
+() S 4 T () S 8 T () S 12 T () S
+(for) K
+( \() p
+(int) k
+( j = 0; j < men.size\(\); ++j\) {) p n
+() S 4 T () S 8 T () S 12 T () S 16 T () S
+(if) K
+( \(H.ret[i][j]\) sol += dist\(houses[i], men[j]\);) p n
+() S 4 T () S 8 T () S 12 T (}) N
+() S 4 T () S 8 T (}) N
+() S 4 T () S 8 T (printf\(") S
+(%d\\n) str
+(", sol\);) p n
+(hungarian.cpp) () (Apr 12, 12 20:11) title
+border
+grestore
+end % of iso1dict
+pagesave restore
+showpage
+%%Page: (4) 16
+%%BeginPageSetup
+/pagesave save def
+%%EndPageSetup
+iso1dict begin
+gsave
+llx lly 0 add translate
+/v 0 store
+/x0 x v get 4.850123 add sx cw mul add store
+/y0 y v get bfs th add sub store
+x0 y0 moveto
+() p 4 T (}) N
+() S 4 T () S
+(return) K
+( 0;) p n
+(}) N
+() N
+(hungarian.cpp) () (Apr 12, 12 20:11) title
+border
+grestore
+end % of iso1dict
+pagesave restore
+showpage
+%%Page: (1) 17
+%%BeginPageSetup
+/pagesave save def
+%%EndPageSetup
+iso1dict begin
+gsave
+llx lly 0 add translate
+/v 0 store
+/x0 x v get 4.850123 add sx cw mul add store
+/y0 y v get bfs th add sub store
+x0 y0 moveto
+(/***************************) c n
+( *     KMP) N
+( * *************************/) N
+(// c/p from Zagreb) N
+(#define) K
+( MAXP 1000) p n
+(#define) K
+( MAXT 1000) p n
+() N
+(int) k
+( pi[MAXP+1];) p n
+(char) k
+( T[MAXT+1]; ) p
+(int) k
+( n;) p n
+(char) k
+( P[MAXP+1]; ) p
+(int) k
+( m;) p n
+() N
+(void) k
+( compute_prefix_function\(\) {) p n
+(    pi[1] = 0;) N
+(    ) S
+(int) k
+( k = 0;) p n
+(    ) S
+(for) K
+( \() p
+(int) k
+( q = 2; q <= m; ++q\) {) p n
+(        ) S
+(while) K
+( \(k > 0 && P[k] != P[q-1]\) k = pi[k];) p n
+(        ) S
+(if) K
+( \(P[k] == P[q-1]\) ++k;) p n
+(        pi[q] = k;) N
+(    }) N
+(}) N
+() N
+(void) k
+( KMP_matcher\(\) {) p n
+(    ) S
+(int) k
+( q = 0;) p n
+() N
+(    ) S
+(for) K
+( \() p
+(int) k
+( i = 1; i <= n; ++i\) {) p n
+(        ) S
+(while) K
+( \(q > 0 && P[q] != T[i-1]\) q = pi[q];) p n
+(        ) S
+(if) K
+( \(P[q] == T[i-1]\) q++;) p n
+(        ) S
+(if) K
+( \(q == m\) { ) p n
+(            ) S
+(// we found pattern with shift i-m) c n
+(            q = pi[q];) p n
+(        }) N
+(    }) N
+(}) N
+() N
+() N
+(int) k
+( main\(\) {) p n
+(    ) S
+(return) K
+( 0;) p n
+(}) N
+(kmp.cpp) () (Apr 12, 12 20:18) title
+border
+grestore
+end % of iso1dict
+pagesave restore
+showpage
+%%Page: (1) 18
+%%BeginPageSetup
+/pagesave save def
+%%EndPageSetup
+iso1dict begin
+gsave
+llx lly 0 add translate
+/v 0 store
+/x0 x v get 4.850123 add sx cw mul add store
+/y0 y v get bfs th add sub store
+x0 y0 moveto
+(/***************************) c n
+( *     Matching) N
+( * *************************/) N
+(#include) K
+( <cstdio>) p n
+(#include) K
+( <vector>) p n
+() N
+(using) K
+( ) p
+(namespace) K
+( std;) p n
+() N
+() N
+(vector <vector <) S
+(int) k
+(> > E;) p n
+(vector <) S
+(int) k
+(> connectedF, bio;) p n
+() N
+(int) k
+( dfs\() p
+(int) k
+( s\) {) p n
+() S 4 T () S
+(if) K
+( \(bio[s]\) ) p
+(return) K
+( 0;) p n
+() S 4 T (bio[s] = 1;) N
+() N
+() S 4 T () S
+(for) K
+( \() p
+(int) k
+( i = 0; i < E[s].size\(\); ++i\) {) p n
+() S 4 T () S 8 T () S
+(if) K
+( \(connectedF[E[s][i]] == s\) ) p
+(continue) K
+(;) p n
+() S 4 T () S 8 T () S
+(if) K
+( \(connectedF[E[s][i]] == -1 || dfs\(connectedF[E[s][i]]\)\) {) p n
+() S 4 T () S 8 T () S 12 T (connectedF[E[s][i]] = 1;) N
+() S 4 T () S 8 T () S 12 T () S
+(return) K
+( 1;) p n
+() S 4 T () S 8 T (}) N
+() S 4 T (}) N
+() N
+() S 4 T () S
+(return) K
+( 0;) p n
+(}) N
+() N
+(int) k
+( matching\(\) {) p n
+() S 4 T () S
+(int) k
+( sol = 0;) p n
+() S 4 T (bio.resize\(hor.size\(\)\);) N
+() S 4 T (connectedF.resize\(vert.size\(\)\);) N
+() S 4 T (fill\(connectedF.begin\(\), connectedF.end\(\), -1\);) N
+() N
+() S 4 T () S
+(for) K
+( \() p
+(int) k
+( i = 0; i < hor.size\(\); ++i\) {) p n
+() S 4 T () S 8 T (fill\(bio.begin\(\), bio.end\(\), 0\);) N
+() S 4 T () S 8 T (sol += dfs\(i\);) N
+() S 4 T (}) N
+() N
+() S 4 T () S
+(return) K
+( sol;) p n
+(}) N
+() N
+(matching.cpp) () (Apr 12, 12 20:20) title
+border
+grestore
+end % of iso1dict
+pagesave restore
+showpage
+%%Page: (1) 19
+%%BeginPageSetup
+/pagesave save def
+%%EndPageSetup
+iso1dict begin
+gsave
+llx lly 0 add translate
+/v 0 store
+/x0 x v get 4.850123 add sx cw mul add store
+/y0 y v get bfs th add sub store
+x0 y0 moveto
+(/************************) c n
+( *     Min cost max flow ) N
+( * *********************/) N
+(// from WA library) N
+(#include) K
+( <iostream>) p n
+(#include) K
+( <algorithm>) p n
+(#include) K
+( <queue>) p n
+() N
+(using) K
+( ) p
+(namespace) K
+( std;) p n
+() N
+(const) K
+( ) p
+(int) k
+( N = 205, INF = 10000000;) p n
+(// cost[i][j] == cost[j][i] always!) c n
+(int) k
+( graph[N][N], cost[N][N], reduced_cost[N][N];) p n
+(int) k
+( potential[N], prev[N], source = N - 1, sink = N - 2;) p n
+() N
+(void) k
+( reduce_cost\(\) {) p n
+(        ) S
+(for) K
+( \() p
+(int) k
+( i = 0; i < N; i++\)) p n
+(                ) S
+(for) K
+( \() p
+(int) k
+( j = 0; j < N; j++\)) p n
+(                        ) S
+(if) K
+( \(graph[i][j] >= 0\)) p n
+(                                reduced_cost[i][j] += potential[i] - potential[j) N
+(];) N
+(}) N
+() N
+(typedef) K
+( pair<) p
+(int) k
+(, ) p
+(int) k
+(> pii;) p n
+() N
+(int) k
+( dijkstra\(\) {) p n
+(        reduce_cost\(\);) N
+() N
+(        fill\(potential, potential + N, 2 * INF\);) N
+(        fill\(prev, prev + N, -1\);) N
+(        priority_queue<pii, vector<pii>, greater<pii> > pq;) N
+() N
+(        pq.push\(pii\(0, source\)\);) N
+(        potential[source] = 0;) N
+() N
+(        ) S
+(while) K
+( \(!pq.empty\(\)\) {) p n
+(                pii v = pq.top\(\); pq.pop\(\);) N
+(                ) S
+(int) k
+( c = v.first, curr = v.second;) p n
+() N
+(                ) S
+(if) K
+( \(potential[curr] < c\) ) p
+(continue) K
+(;) p n
+() N
+(                ) S
+(for) K
+( \() p
+(int) k
+( next = 0; next < N; next++\) {) p n
+(                        ) S
+(if) K
+( \(graph[curr][next] <= 0\) ) p
+(continue) K
+(;) p n
+(                        ) S
+(if) K
+( \(potential[next] <= c + reduced_cost[curr][next]\) ) p
+(con) K n
+(tinue) S
+(;) p n
+(                        potential[next] = c + reduced_cost[curr][next];) N
+(                        prev[next] = curr;) N
+(                        pq.push\(pii\(potential[next],next\)\);) N
+(                }) N
+(        }) N
+(        ) S
+(return) K
+( potential[sink];) p n
+(}) N
+() N
+(int) k
+( update\() p
+(int) k
+(& v\) {) p n
+(        ) S
+(int) k
+( ret = INF;) p n
+(        ) S
+(for) K
+( \() p
+(int) k
+( c = sink, p = prev[c]; c != source; c = p, p = prev[c]\)) p n
+(                ret = min\(ret, graph[p][c]\);) N
+(        ) S
+(for) K
+( \() p
+(int) k
+( c = sink, p = prev[c]; c != source; c = p, p = prev[c]\)) p n
+(                v += cost[p][c] * ret, graph[p][c] -= ret, graph[c][p] += ret;) N
+(min_cost_max_flow.cpp) () (Apr 12, 12 20:11) title
+border
+grestore
+end % of iso1dict
+pagesave restore
+showpage
+%%Page: (2) 20
+%%BeginPageSetup
+/pagesave save def
+%%EndPageSetup
+iso1dict begin
+gsave
+llx lly 0 add translate
+/v 0 store
+/x0 x v get 4.850123 add sx cw mul add store
+/y0 y v get bfs th add sub store
+x0 y0 moveto
+(        ) p
+(return) K
+( ret;) p n
+(}) N
+() N
+() N
+(int) k
+( min_cost_max_flow\() p
+(int) k
+(& c\) {) p n
+(        ) S
+(int) k
+( flow = 0; c = 0;) p n
+() N
+(        fill\(potential, potential + N, INF\);) N
+(        copy\(cost[0], cost[N], reduced_cost[0]\);) N
+(        potential[source] = 0;) N
+(        ) S
+(for) K
+( \() p
+(int) k
+( k = 0; k < N; k++\)) p n
+(                ) S
+(for) K
+( \() p
+(int) k
+( i = 0; i < N; i++\)) p n
+(                        ) S
+(for) K
+( \() p
+(int) k
+( j = 0; j < N; j++\)) p n
+(                                ) S
+(if) K
+( \(graph[i][j] > 0\)) p n
+(                                        potential[j] = min\(potential[j], potenti) N
+(al[i] + cost[i][j]\);) N
+() N
+(        ) S
+(while) K
+( \(dijkstra\(\) < INF\) flow += update\(c\);) p n
+(        ) S
+(return) K
+( flow;) p n
+(}) N
+() N
+(/*$*/) c n
+(int) k
+( main\(\) {) p n
+(        ) S
+(int) k
+( ncases;) p n
+(        cin >> ncases;) N
+(        ) S
+(for) K
+( \() p
+(int) k
+( caseno = 1; caseno <= ncases; caseno++\) {) p n
+(                ) S
+(if) K
+( \(caseno != 1\) cout << endl;) p n
+(                ) S
+(int) k
+( num_buildings, num_shelters;) p n
+() N
+(                vector<pair<) S
+(int) k
+(, ) p
+(int) k
+(> > buildings, shelters;) p n
+(                cin >> num_buildings >> num_shelters;) N
+(                fill\(graph[0], graph[N], 0\);) N
+(                fill\(cost[0], cost[N], 0\);) N
+() N
+(                ) S
+(for) K
+( \() p
+(int) k
+( i = 0; i < num_buildings; i++\) {) p n
+(                        ) S
+(int) k
+( x, y, cap;) p n
+(                        cin >> x >> y >> cap;) N
+(                        graph[source][i] = cap;) N
+(                        buildings.push_back\(pair<) S
+(int) k
+(, ) p
+(int) k
+(>\(x, y\)\);) p n
+(                }) N
+() N
+(                ) S
+(for) K
+( \() p
+(int) k
+( i = 0; i < num_shelters; i++\) {) p n
+(                        ) S
+(int) k
+( x, y, cap;) p n
+(                        cin >> x >> y >> cap;) N
+(                        graph[i + num_buildings][sink] = cap;) N
+(                        shelters.push_back\(pair<) S
+(int) k
+(, ) p
+(int) k
+(>\(x, y\)\);) p n
+(                }) N
+() N
+(                ) S
+(for) K
+( \() p
+(int) k
+( i = 0; i < num_buildings; i++\)) p n
+(                        ) S
+(for) K
+( \() p
+(int) k
+( j = 0; j < num_shelters; j++\) {) p n
+(                                cost[i][num_buildings + j] =) N
+(                                        1 + abs\(buildings[i].first - shelters[j]) N
+(.first\)) N
+(                                        + abs\(buildings[i].second - shelters[j].) N
+(second\);) N
+(                                cost[num_buildings + j][i] = -cost[i][num_buildi) N
+(ngs + j];) N
+(                                graph[i][num_buildings + j] = INF;) N
+(                        }) N
+(min_cost_max_flow.cpp) () (Apr 12, 12 20:11) title
+border
+grestore
+end % of iso1dict
+pagesave restore
+showpage
+%%Page: (3) 21
+%%BeginPageSetup
+/pagesave save def
+%%EndPageSetup
+iso1dict begin
+gsave
+llx lly 0 add translate
+/v 0 store
+/x0 x v get 4.850123 add sx cw mul add store
+/y0 y v get bfs th add sub store
+x0 y0 moveto
+() p n
+(                ) S
+(int) k
+( c = 0, plan_cost = 0;) p n
+(                min_cost_max_flow\(c\);) N
+() N
+(                ) S
+(for) K
+( \() p
+(int) k
+( i = 0; i < num_buildings; i++\)) p n
+(                        ) S
+(for) K
+( \() p
+(int) k
+( j = 0; j < num_shelters; j++\) {) p n
+(                                ) S
+(int) k
+( p;) p n
+(                                cin >> p;) N
+(                                plan_cost += p * cost[i][num_buildings + j];) N
+(                        }) N
+() N
+(                ) S
+(if) K
+( \(c != plan_cost\) {) p n
+(                        cout << ") S
+(SUBOPTIMAL) str
+(" << endl;) p n
+(                        ) S
+(for) K
+( \() p
+(int) k
+( i = 0; i < num_buildings; i++\) {) p n
+(                                ) S
+(for) K
+( \() p
+(int) k
+( j = 0; j < num_shelters; j++\) {) p n
+(                                        cout << \(j ? ") S
+( ) str
+(" : ""\) << graph[num_buil) p n
+(dings + j][i];) N
+(                                }) N
+(                                cout << endl;) N
+(                        }) N
+(                } ) S
+(else) K
+( cout << ") p
+(OPTIMAL) str
+(" << endl;) p n
+(        }) N
+(        ) S
+(return) K
+( 0;) p n
+(}) N
+(/*$*/) c n
+() p n
+(min_cost_max_flow.cpp) () (Apr 12, 12 20:11) title
+border
+grestore
+end % of iso1dict
+pagesave restore
+showpage
+%%Page: (1) 22
+%%BeginPageSetup
+/pagesave save def
+%%EndPageSetup
+iso1dict begin
+gsave
+llx lly 0 add translate
+/v 0 store
+/x0 x v get 4.850123 add sx cw mul add store
+/y0 y v get bfs th add sub store
+x0 y0 moveto
+(/***************************) c n
+( *     Network flow ) N
+( * *************************/) N
+(// tested on 11082 ACM problem) N
+(#include) K
+( <cstdio>) p n
+(#include) K
+( <cstring>) p n
+(#include) K
+( <cstdlib>) p n
+(#include) K
+( <queue>) p n
+(#define) K
+( INF 0x3f3f3f) p n
+() N
+(using) K
+( ) p
+(namespace) K
+( std;) p n
+() N
+(int) k
+( cap[42][42];) p n
+(int) k
+( how[42], ff[42];) p n
+() N
+(int) k
+( bfs\() p
+(int) k
+( source, ) p
+(int) k
+( sink\) {) p n
+() S 4 T (memset\(how, -1, ) S
+(sizeof) K
+( how\);) p n
+() S 4 T (memset\(ff, 0, ) S
+(sizeof) K
+( ff\);) p n
+() S 4 T (how[source] = source;) N
+() S 4 T (ff[source] = INF;) N
+() S 4 T () N
+() S 4 T (queue <) S
+(int) k
+(> Q;) p n
+() S 4 T (Q.push\(source\);) N
+() N
+() S 4 T () S
+(while) K
+( \(Q.size\(\)\) {) p n
+() S 4 T () S 8 T () S
+(int) k
+( s = Q.front\(\); Q.pop\(\);) p n
+() N
+() S 4 T () S 8 T () S
+(if) K
+( \(s == sink\) ) p
+(break) K
+(;) p n
+() N
+() S 4 T () S 8 T () S
+(for) K
+( \() p
+(int) k
+( i = 0; i < 42; ++i\) {) p n
+() S 4 T () S 8 T () S 12 T () S
+(if) K
+( \(cap[s][i] != 0 && how[i] == -1\) {) p n
+() S 4 T () S 8 T () S 12 T () S 16 T (ff[i] = min\(ff[s], cap[s][i]\);) N
+() S 4 T () S 8 T () S 12 T () S 16 T (how[i] = s;) N
+() S 4 T () S 8 T () S 12 T () S 16 T (Q.push\(i\);) N
+() S 4 T () S 8 T () S 12 T (}) N
+() S 4 T () S 8 T (}) N
+() S 4 T (}) N
+() N
+() S 4 T () S
+(return) K
+( ff[sink];) p n
+(}) N
+() N
+(void) k
+( flow\() p
+(int) k
+( source, ) p
+(int) k
+( sink\) {) p n
+() S 4 T () S
+(int) k
+( maxflow = 0;) p n
+() S 4 T () S
+(for) K
+( \() p
+(int) k
+( f = 0; f = bfs\(source, sink\); maxflow += f\) {) p n
+() S 4 T () S 8 T () S
+(for) K
+( \() p
+(int) k
+( s = sink; s != source; s = how[s]\) {) p n
+() S 4 T () S 8 T () S 12 T (cap[how[s]][s] -= f;) N
+() S 4 T () S 8 T () S 12 T (cap[s][how[s]] += f;) N
+() S 4 T () S 8 T (}) N
+() S 4 T (}) N
+(}) N
+() N
+(int) k
+( main\(\) {) p n
+() S 4 T () S
+(int) k
+( T;) p n
+() S 4 T (scanf\(") S
+(%d) str
+(", &T\);) p n
+() N
+() S 4 T () S
+(for) K
+( \() p
+(int) k
+( tt = 1; tt <= T; ++tt\) {) p n
+() S 4 T () S 8 T (memset\(cap, 0, ) S
+(sizeof) K
+( cap\);) p n
+() S 4 T () S 8 T () S
+(int) k
+( R, C;) p n
+() S 4 T () S 8 T (scanf\(") S
+(%d%d) str
+(", &R, &C\);) p n
+(network_flow.cpp) () (Apr 12, 12 20:20) title
+border
+grestore
+end % of iso1dict
+pagesave restore
+showpage
+%%Page: (2) 23
+%%BeginPageSetup
+/pagesave save def
+%%EndPageSetup
+iso1dict begin
+gsave
+llx lly 0 add translate
+/v 0 store
+/x0 x v get 4.850123 add sx cw mul add store
+/y0 y v get bfs th add sub store
+x0 y0 moveto
+() p 4 T () S 8 T () S
+(int) k
+( before = 0;) p n
+() S 4 T () S 8 T () S
+(for) K
+( \() p
+(int) k
+( i = 0; i < R; ++i\) {) p n
+() S 4 T () S 8 T () S 12 T () S
+(int) k
+( a; scanf\(") p
+(%d) str
+(", &a\);) p n
+() S 4 T () S 8 T () S 12 T (cap[0][i+1] = a - C - before;) N
+() S 4 T () S 8 T () S 12 T (before = a;) N
+() S 4 T () S 8 T (}) N
+() S 4 T () S 8 T (before = 0;) N
+() S 4 T () S 8 T () S
+(for) K
+( \() p
+(int) k
+( i = 0; i < C; ++i\) {) p n
+() S 4 T () S 8 T () S 12 T () S
+(int) k
+( a; scanf\(") p
+(%d) str
+(", &a\);) p n
+() S 4 T () S 8 T () S 12 T (cap[R+i+1][R+C+1] = a - R - before;) N
+() S 4 T () S 8 T () S 12 T (before = a;) N
+() S 4 T () S 8 T (}) N
+() S 4 T () S 8 T () S
+(for) K
+( \() p
+(int) k
+( i = 0; i < R; ++i\) {) p n
+() S 4 T () S 8 T () S 12 T () S
+(for) K
+( \() p
+(int) k
+( j = 0; j < C; ++j\) {) p n
+() S 4 T () S 8 T () S 12 T () S 16 T (cap[i+1][j+R+1] = 19;) N
+() S 4 T () S 8 T () S 12 T (}) N
+() S 4 T () S 8 T (}) N
+() N
+() S 4 T () S 8 T (flow\(0, R+C+1\);) N
+() N
+() S 4 T () S 8 T (printf\(") S
+(Matrix %d\\n) str
+(", tt\);) p n
+() S 4 T () S 8 T () S
+(for) K
+( \() p
+(int) k
+( i = 0; i < R; ++i\) {) p n
+() S 4 T () S 8 T () S 12 T () S
+(for) K
+( \() p
+(int) k
+( j = 0; j < C; ++j\) {) p n
+() S 4 T () S 8 T () S 12 T () S 16 T (printf\(") S
+(%d ) str
+(", cap[j+R+1][i+1] + 1\);) p n
+() S 4 T () S 8 T () S 12 T (}) N
+() S 4 T () S 8 T () S 12 T (printf\(") S
+(\\n) str
+("\);) p n
+() S 4 T () S 8 T (}) N
+() S 4 T () S 8 T (printf\(") S
+(\\n) str
+("\);) p n
+() N
+() S 4 T (}) N
+() S 4 T () S
+(return) K
+( 0;) p n
+(}) N
+(network_flow.cpp) () (Apr 12, 12 20:20) title
+border
+grestore
+end % of iso1dict
+pagesave restore
+showpage
+%%Page: (1) 24
+%%BeginPageSetup
+/pagesave save def
+%%EndPageSetup
+iso1dict begin
+gsave
+llx lly 0 add translate
+/v 0 store
+/x0 x v get 4.850123 add sx cw mul add store
+/y0 y v get bfs th add sub store
+x0 y0 moveto
+(/***************************) c n
+( *     Number theory ) N
+( * *************************/) N
+(// WA library.) N
+(// CRT NOT TESTED) N
+(// extended gcd works) N
+(#include) K
+( <cmath>) p n
+(#include) K
+( <cstdlib>) p n
+(#include) K
+( <cstdio>) p n
+(#include) K
+( <algorithm>) p n
+() N
+(using) K
+( ) p
+(namespace) K
+( std;) p n
+() N
+(ldiv_t div_correct\() S
+(long) k
+( y, ) p
+(long) k
+( x\) {) p n
+() S 4 T (ldiv_t v = ldiv\(y, x\);) N
+() S 4 T () S
+(if) K
+( \(y < 0 && v.rem != 0\) {) p n
+() S 4 T () S 8 T (v.quot -= 1;) N
+() S 4 T () S 8 T (v.rem += labs\(x\);) N
+() S 4 T (}) N
+() S 4 T () S
+(return) K
+( v;) p n
+(}) N
+() N
+(pair<) S
+(long) k
+(, ) p
+(long) k
+(> extended_gcd\() p
+(long) k
+( a, ) p
+(long) k
+( b\) {) p n
+() S 4 T () S
+(if) K
+( \(a % b == 0\) ) p n
+() S 4 T () S 8 T () S
+(return) K
+( pair<) p
+(long) k
+(, ) p
+(long) k
+(>\(0, 1\);) p n
+() S 4 T () S
+(else) K
+( {) p n
+() S 4 T () S 8 T (ldiv_t v = div_correct\(a, b\);) N
+() S 4 T () S 8 T (pair<) S
+(long) k
+(, ) p
+(long) k
+(> t = extended_gcd\(b, v.rem\);) p n
+() S 4 T () S 8 T () S
+(return) K
+( pair<) p
+(long) k
+(,) p
+(long) k
+(>\(t.second, t.first - t.second * v.quot\);) p n
+() S 4 T (}) N
+(}) N
+() N
+(long) k
+( crt\() p
+(long) k
+( *a, ) p
+(long) k
+( *n, ) p
+(long) k
+( r\)) p n
+({) N
+() S 4 T () S
+(long) k
+( N = 1;) p n
+() S 4 T () S
+(for) K
+( \() p
+(int) k
+( k = 0; k < r; k++\)) p n
+() S 4 T () S 8 T (N *= n[k];) N
+() N
+() S 4 T () S
+(long) k
+( s = 0;) p n
+() S 4 T () S
+(for) K
+( \() p
+(int) k
+( k = 0; k < r; k++\)) p n
+() S 4 T ({) N
+() S 4 T () S 8 T () S
+(long) k
+( p = N / n[k];) p n
+() S 4 T () S 8 T () S
+(long) k
+( x = extended_gcd\(p, n[k]\).first;) p n
+() S 4 T () S 8 T (s += a[k] * p * x;) N
+() S 4 T () S 8 T (s %= N;) N
+() S 4 T (}) N
+() S 4 T () S
+(return) K
+( s;) p n
+(}) N
+() N
+(int) k
+( main\(\) {) p n
+() S 4 T () S
+(long) k
+( A, B;) p n
+() S 4 T () S
+(while) K
+( \(scanf\(") p
+(%ld%ld) str
+(", &A, &B\) != EOF\) {) p n
+() S 4 T () S 8 T (pair<) S
+(long) k
+(,) p
+(long) k
+(> xy = extended_gcd\(A, B\);) p n
+() S 4 T () S 8 T (printf\(") S
+(%ld %ld %ld\\n) str
+(", xy.first, xy.second, A * xy.first + B * xy.second\)) p n
+(;) N
+() S 4 T (}) N
+(}) N
+(number_theory.cpp) () (Apr 12, 12 20:11) title
+border
+grestore
+end % of iso1dict
+pagesave restore
+showpage
+%%Page: (1) 25
+%%BeginPageSetup
+/pagesave save def
+%%EndPageSetup
+iso1dict begin
+gsave
+llx lly 0 add translate
+/v 0 store
+/x0 x v get 4.850123 add sx cw mul add store
+/y0 y v get bfs th add sub store
+x0 y0 moveto
+(/***************************) c n
+( *     SCC ) N
+( * *************************/) N
+(// Tested on 11504) N
+(#include) K
+( <cstdio>) p n
+(#include) K
+( <cstring>) p n
+(#include) K
+( <vector>) p n
+(#define) K
+( MAX 100000) p n
+() N
+(using) K
+( ) p
+(namespace) K
+( std;) p n
+() N
+(vector <vector <) S
+(int) k
+(> > E;) p n
+(int) k
+( on_stack[MAX], visited[MAX], component[MAX];) p n
+(int) k
+( num_components;) p n
+(int) k
+( global_time;) p n
+(vector <) S
+(int) k
+(> node_stack;) p n
+() N
+(void) k
+( load\(\) {) p n
+(    ) S
+(int) k
+( n, m;) p n
+(    scanf\(") S
+(%d%d) str
+(", &n, &m\);) p n
+(    E.clear\(\);) N
+(    E.resize\(n\);) N
+() N
+(    ) S
+(for) K
+( \() p
+(int) k
+( i = 0; i < m; ++i\) {) p n
+(        ) S
+(int) k
+( a, b;) p n
+(        scanf\(") S
+(%d%d) str
+(", &a, &b\);) p n
+(        E[a-1].push_back\(b-1\);) N
+(    }) N
+(}) N
+() N
+(int) k
+( dfs\() p
+(int) k
+( s\) {) p n
+(    ) S
+(int) k
+( lowlink = visited[s] = global_time++;) p n
+(    node_stack.push_back\(s\);) N
+(    on_stack[s] = 1;) N
+() N
+(    ) S
+(for) K
+( \() p
+(int) k
+( i = 0; i < E[s].size\(\); ++i\) {) p n
+(        ) S
+(if) K
+( \(!visited[E[s][i]]\) {) p n
+(            lowlink = min\(lowlink, dfs\(E[s][i]\)\);) N
+(        } ) S
+(else) K
+( ) p
+(if) K
+( \(on_stack[E[s][i]]\) {) p n
+(            lowlink = min\(lowlink, visited[E[s][i]]\);) N
+(        }) N
+(    }) N
+() N
+(    ) S
+(if) K
+( \(lowlink == visited[s]\) {) p n
+(        ) S
+(// s defines new component consisting of nodes on stack) c n
+(        ++num_components;) p n
+(        ) S
+(while) K
+( \() p
+(true) k
+(\) {) p n
+(            ) S
+(int) k
+( t = node_stack.back\(\);) p n
+(            component[node_stack.back\(\)] = num_components;) N
+(            on_stack[node_stack.back\(\)] = 0;) N
+(            node_stack.pop_back\(\);) N
+(            ) S
+(if) K
+( \(t == s\) ) p
+(break) K
+(;) p n
+(        }) N
+(    }) N
+() N
+(    ) S
+(return) K
+( lowlink;) p n
+(}) N
+() N
+(int) k
+( main\(\) {) p n
+(scc.cpp) () (Apr 12, 12 20:11) title
+border
+grestore
+end % of iso1dict
+pagesave restore
+showpage
+%%Page: (2) 26
+%%BeginPageSetup
+/pagesave save def
+%%EndPageSetup
+iso1dict begin
+gsave
+llx lly 0 add translate
+/v 0 store
+/x0 x v get 4.850123 add sx cw mul add store
+/y0 y v get bfs th add sub store
+x0 y0 moveto
+(    ) p
+(int) k
+( T;) p n
+(    scanf\(") S
+(%d) str
+(", &T\);) p n
+(    ) S
+(while) K
+( \(T--\) {) p n
+(        load\(\);) N
+(        memset\(visited, 0, ) S
+(sizeof) K
+( visited\);) p n
+(        memset\(on_stack, 0, ) S
+(sizeof) K
+( on_stack\);) p n
+(        memset\(component, 0, ) S
+(sizeof) K
+( component\);) p n
+(        global_time = 1;) N
+(        num_components = 0;) N
+(        ) S
+(for) K
+( \() p
+(int) k
+( i = 0; i < E.size\(\); ++i\) {) p n
+(            ) S
+(if) K
+( \(!visited[i]\) {) p n
+(                dfs\(i\);) N
+(            }) N
+(        }) N
+() N
+(        ) S
+(// solution is number of componenets with in-degree == 0) c n
+(        vector <) p
+(int) k
+(> knock_down\(num_components, 1\);) p n
+(        ) S
+(int) k
+( sol = num_components;) p n
+() N
+(        ) S
+(for) K
+( \() p
+(int) k
+( i = 0; i < E.size\(\); ++i\) {) p n
+(            ) S
+(for) K
+( \() p
+(int) k
+( j = 0; j < E[i].size\(\); ++j\) {) p n
+(                ) S
+(if) K
+( \(component[i] != component[E[i][j]] && knock_down[component[E) p n
+([i][j]]]\) {) N
+(                    knock_down[component[E[i][j]]] = 0;) N
+(                    --sol;) N
+(                }) N
+(            }) N
+(        }) N
+() N
+(        printf\(") S
+(%d\\n) str
+(", sol\);) p n
+(    }) N
+(    ) S
+(return) K
+( 0;) p n
+(}) N
+(scc.cpp) () (Apr 12, 12 20:11) title
+border
+grestore
+end % of iso1dict
+pagesave restore
+showpage
+%%Page: (1) 27
+%%BeginPageSetup
+/pagesave save def
+%%EndPageSetup
+iso1dict begin
+gsave
+llx lly 0 add translate
+/v 0 store
+/x0 x v get 4.850123 add sx cw mul add store
+/y0 y v get bfs th add sub store
+x0 y0 moveto
+(/***************************) c n
+( *     Tournament tree ) N
+( * *************************/) N
+(// NOT YET TESTED) N
+(// igor's new code) N
+(// supports:) N
+(// * find minimum in a range) N
+(// * change an element) N
+(#include) K
+( <cstdio>) p n
+(#include) K
+( <algorithm>) p n
+(#define) K
+( MAXN 1000000) p n
+(#define) K
+( INF 0x3f3f3f3f) p n
+() N
+(using) K
+( ) p
+(namespace) K
+( std;) p n
+() N
+(int) k
+( tournament[2*MAXN + 1];) p n
+(int) k
+( tt_size;) p n
+(int) k
+( A[MAXN];) p n
+() N
+(void) k
+( tt_create\() p
+(int) k
+( n\) {) p n
+(    ) S
+(for) K
+( \(tt_size = 1; tt_size < n; tt_size *= 2\);) p n
+() N
+(    ) S
+(for) K
+( \() p
+(int) k
+( i = tt_size; i < tt_size*2; ++i\) {) p n
+(        ) S
+(if) K
+( \(i-tt_size < n\) tournament[i] = A[i-tt_size];) p n
+(        ) S
+(else) K
+( tournament[i] = INF;) p n
+(    }) N
+(    ) S
+(for) K
+( \() p
+(int) k
+( i = tt_size - 1; i >= 1; --i\) {) p n
+(        tournament[i] = min\(tournament[2*i], tournament[2*i+1]\);) N
+(    }) N
+(}) N
+() N
+(int) k
+( tt_change\() p
+(int) k
+( index, ) p
+(int) k
+( new_value\) {) p n
+(    tournament[tt_size + index] = new_value;) N
+() N
+(    ) S
+(for) K
+( \() p
+(int) k
+( i = tt_size + index; i >= 1; i /= 2\) {) p n
+(        tournament[i] = min\(tournament[2*i], tournament[2*i+1]\);) N
+(    }) N
+(}) N
+() N
+(// [from, to> [lo, hi>) c n
+(int) k
+( _tt_query\() p
+(int) k
+( from, ) p
+(int) k
+( to, ) p
+(int) k
+( p, ) p
+(int) k
+( lo, ) p
+(int) k
+( hi\) {) p n
+(    ) S
+(if) K
+( \(to <= lo || from >= hi\) ) p
+(return) K
+( INF;) p n
+(    ) S
+(if) K
+( \(from <= lo && to >= hi\) ) p
+(return) K
+( tournament[p];) p n
+() N
+(    ) S
+(return) K
+( min\(_tt_query\(from, to, 2*p, lo, \(lo+hi\)/2\), _tt_query\(from, to, 2*p ) p n
+(+ 1, \(lo+hi\)/2, hi\)\);) N
+(}) N
+() N
+(int) k
+( tt_query\() p
+(int) k
+( from, ) p
+(int) k
+( to\) {) p n
+(    ) S
+(return) K
+( _tt_query\(from, to, 1, 0, tt_size\);) p n
+(}) N
+(tournament.cpp) () (Apr 12, 12 20:11) title
+border
+grestore
+end % of iso1dict
+pagesave restore
+showpage
+%%Page: (1) 28
+%%BeginPageSetup
+/pagesave save def
+%%EndPageSetup
+iso1dict begin
+gsave
+llx lly 0 add translate
+/v 0 store
+/x0 x v get 4.850123 add sx cw mul add store
+/y0 y v get bfs th add sub store
+x0 y0 moveto
+(/***************************) c n
+( *     Union find ) N
+( * *************************/) N
+(// NOT TESTED YET) N
+(// C/P from Univ of Zagreb library) N
+(#include) K
+( <cstdio>) p n
+(#define) K
+( MAXN 1000000) p n
+(#define) K
+( NOT_CONNECTED 0) p n
+(#define) K
+( CONNECTED 1) p n
+(#define) K
+( ALREADY_CONNECTED 2) p n
+() N
+(int) k
+( dad[MAXN], rank[MAXN];) p n
+(// int kids[MAXN]; // if we want to find largest componenet) c n
+() p n
+(int) k
+( union_find\() p
+(int) k
+( a, ) p
+(int) k
+( b, ) p
+(bool) k
+( connect = ) p
+(true) k
+(\) {) p n
+(    ) S
+(int) k
+( topa, topb;) p n
+(    ) S
+(int) k
+( newtop;) p n
+() N
+(    ) S
+(for) K
+( \(topa = a; topa != dad[topa]; topa = dad[topa]\);) p n
+(    ) S
+(for) K
+( \(topb = b; topb != dad[topb]; topb = dad[topb]\);) p n
+(    dad[a] = topa; dad[b] = topb;) N
+() N
+(    ) S
+(if) K
+( \(topa != topb && connect\) {) p n
+(        ) S
+(if) K
+( \(rank[topa] > rank[topb]\) {) p n
+(            ) S
+(// kids[topa] += kids[topb];) c n
+(            dad[topb] = newtop = topa;) p n
+(        } ) S
+(else) K
+( {) p n
+(            ) S
+(// kids[topb] += kids[topa];) c n
+(            dad[topa] = newtop = topb;) p n
+(            ) S
+(if) K
+( \(rank[topa] == rank[topb]\) rank[topb]++;) p n
+(        }) N
+() N
+(        ) S
+(int) k
+( x;) p n
+(        ) S
+(for) K
+( \( ; a != topa; \) x = dad[a], dad[a] = newtop, a = x;) p n
+(        ) S
+(for) K
+( \( ; b != topb; \) x = dad[b], dad[b] = newtop, b = x;) p n
+() N
+(        ) S
+(return) K
+( CONNECTED;) p n
+(    } ) S
+(else) K
+( {) p n
+(        ) S
+(int) k
+( x;) p n
+(        ) S
+(for) K
+( \( ; a != topa; \) x = dad[a], dad[a] = topa, a = x;) p n
+(        ) S
+(for) K
+( \( ; b != topb; \) x = dad[b], dad[b] = topb, b = x;) p n
+() N
+(        ) S
+(return) K
+( connect || topa == topb ? ALREADY_CONNECTED : NOT_CONNECTED;) p n
+(    }) N
+(}) N
+() N
+(void) k
+( union_find_init\() p
+(int) k
+( n\) {) p n
+(    ) S
+(for) K
+( \() p
+(int) k
+( i = 0; i < n; ++i\) {) p n
+(        dad[i] = i;) N
+(        rank[i] = 0;) N
+(        ) S
+(// kids[i] = 1;) c n
+(    }) p n
+(}) N
+() N
+(int) k
+( main\(\) {) p n
+(    ) S
+(return) K
+( 0;) p n
+(}) N
+(union_find.cpp) () (Apr 12, 12 20:10) title
+border
+grestore
+end % of iso1dict
+pagesave restore
+showpage
+
+%%Trailer
+end
+%%EOF
